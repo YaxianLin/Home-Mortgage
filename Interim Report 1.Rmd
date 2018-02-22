@@ -1,0 +1,16 @@
+---
+title: "Interim Report 1"
+author: "Yaxian Lin"
+date: "2018/2/21"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+The URL for our Team GitHub repository is {https://github.com/YaxianLin/Home-Mortgage.git}. 
+The URL to the Kaggle dataset is {https://www.kaggle.com/jboysen/ny-home-mortgage/data}.
+The URL to the kernel is {https://www.kaggle.com/ambarish/eda-home-mortgage-ny-with-feature-analysis/notebook}
+
+
+Problem Identification
