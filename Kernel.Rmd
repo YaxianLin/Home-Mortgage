@@ -1,0 +1,523 @@
+---
+title: "Exploratory Data Analysis Home Mortgage NY"
+author: "Bukun"
+output:
+  html_document:
+    number_sections: true
+    toc: true
+    fig_width: 10
+    code_folding: hide
+    fig_height: 4.5
+    theme: cosmo
+    highlight: tango
+---
+
+#Introduction
+
+The Home Mortgage Disclosure Act (HMDA) requires many financial institutions to maintain, report, and publicly disclose information about mortgages.This dataset covers all mortgage decisions made in 2015 for the state of New York.
+
+# Understanding the problem - Business Perspective
+
+Before we dive into solve the problem, let us first understand the business related to this dataset. The best way is to go the website [HMDA](https://www.consumerfinance.gov/data-research/hmda/learn-more) and get the information.
+
+## What is HMDA ?
+
+Each year thousands of banks and other financial institutions report data about mortgages to the public, thanks to the **Home Mortgage Disclosure Act**, or **“HMDA”** for short. These public data are important because:                 
+
+* Help show whether lenders are serving the housing needs of their communities;              
+* Give public officials information that helps them make decisions and policies; and           
+* Shed light on lending patterns that could be discriminatory              
+
+## Loan Origination Journey
+
+Meet Emily. She wants to buy a home but doesn’t have the money to pay for it in cash, so she applies for a loan at her bank. She tells the bank about her finances, the house she wants to buy, and other information the bank needs to make a decision about whether or not to lend to her, and the terms of the loan. The bank reviews Emily’s application, decides that she meets their criteria, and she gets approved. Once all the papers are signed, Emily closes the loan... or in mortgage-speak, **the loan is “originated.”**.                  
+
+Therefore the last stage of the loan is **Loan Origination**. 
+
+# Understanding the problem - Data Perspective
+
+The data provided can be grouped into the following subjects           
+
+* **Location** describes the State, metro area and census tract of the property       
+
+* **Property Type** describes the **Property Type and Occupancy of the property**.Property type values include One-to-four family dwelling,Manufactured housing and Multifamily dwelling. This also answers the question "Will the owner use the property as their primary residence ?" .  The values include Owner occupied as principal dwelling , Not owner occupied as principal dwelling and Not Applicable.
+
+* **Loan** describes the action taken on the Loan, purpose of the Loan , Type of the loan ,Loan's lien status.              
+
+* **Lender** describes the lender associated with the loan and the Federal agency associated with the loan.           
+
+* **Applicant** describes the demographic information for the applicants and the co-applicants.This has the applicant sex , co- applicant sex , applicant race and ethnicity, co- applicant race and ethnicity. 
+
+
+
+We explore the data as outlined in the Table Of Contents.
+
+**Haha:-) Please Upvote if you like it.**
+
+# Mortgage Action Analysis
+
+In this section, we examine the distribution of the various **Actions on Loans**. As discussed in the previous section, we would be interested in the loan action **Loan Origination** since this status signifies that the loan has been flagged off to be given to the applicant.         
+
+
+```{r, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(rpart)
+library(rpart.plot)
+library(caTools)
+library(caret)
+library(DT)
+
+rm(list=ls())
+
+fillColor = "#FFA07A"
+fillColor2 = "#F1C40F"
+
+homeMortgage = read_csv("../input/ny_hmda_2015.csv")
+
+homeMortgageStatus = homeMortgage %>% group_by(action_taken_name) %>%
+  summarise(CountOfActionTaken = n()) %>%
+  mutate(PercentageActionTaken = CountOfActionTaken /sum(CountOfActionTaken) * 100) %>%
+  arrange(desc(PercentageActionTaken))
+
+ggplot(homeMortgageStatus, aes(x = reorder(action_taken_name, PercentageActionTaken), 
+                                             y = PercentageActionTaken)) +
+  geom_bar(stat='identity',colour="white", fill =fillColor) +
+  geom_text(aes(x = action_taken_name, y = 1, label = paste0("( ",round(PercentageActionTaken,2),"% )",sep="")),
+            hjust=0, vjust=.5, size = 4, colour = 'black',
+            fontface = 'bold') +
+  labs(x = 'action_taken_name', y = '%age Count Of Action Taken', title = 'Actions in Loans') +
+  coord_flip() + 
+  theme_bw()
+
+```
+
+More than **50%** of the loans are **loan originated**.
+
+#Ethnicity and Action dependencies
+
+We explore the various ethnic groups which have been associated with the loan origination process.
+
+## Ethnic groups
+
+The following bar graph shows the distribution of the various ethnic communites.          
+
+
+```{r, message=FALSE, warning=FALSE}
+homeMortgageStatus_ethnicity = homeMortgage %>% group_by(action_taken_name,applicant_ethnicity_name) %>%
+  summarise(CountOfActionTaken = n()) %>%
+  arrange(desc(CountOfActionTaken))
+
+homeMortgage_ethnicity = homeMortgage %>% group_by(applicant_ethnicity_name) %>%
+  summarise(CountOfEthnicity = n()) %>%
+  arrange(desc(CountOfEthnicity))
+
+ggplot(homeMortgage_ethnicity, aes(x = reorder(applicant_ethnicity_name, CountOfEthnicity), 
+                                          y = CountOfEthnicity)) +
+  geom_bar(stat='identity',colour="white", fill =fillColor2) +
+  geom_text(aes(x = applicant_ethnicity_name, y = 1, label = paste0("(",round(CountOfEthnicity),")",sep="")),
+            hjust=0, vjust=.5, size = 4, colour = 'black',
+            fontface = 'bold') +
+  labs(x = 'applicant_ethnicity_name', y = '%age Count Of Action Taken', title = 'Actions in Loans') +
+  coord_flip() + 
+  theme_bw()
+
+```
+
+The **Not Hispanic or Latino** ethnic community applies for the largest percentage of the loans.          
+
+##Loan Status and Ethnicity
+
+```{r, message=FALSE, warning=FALSE}
+
+homeMortgageStatus_ethnicity2 = inner_join(homeMortgageStatus_ethnicity,homeMortgage_ethnicity) %>%
+  mutate(percentage = (CountOfActionTaken/CountOfEthnicity) * 100 ) 
+
+
+ggplot(homeMortgageStatus_ethnicity2, aes(x = reorder(action_taken_name, percentage), 
+                               y = percentage)) +
+  geom_bar(stat='identity',colour="white", fill =fillColor2) +
+  facet_wrap(~ applicant_ethnicity_name) +
+  geom_text(aes(x = action_taken_name, y = 1, label = paste0("(",round(percentage),"%)",sep="")),
+            hjust=0, vjust=.5, size = 4, colour = 'black',
+            fontface = 'bold') +
+  labs(x = 'action_taken_name', y = '%age Count Of Action Taken', title = 'Actions in Loans') +
+  coord_flip() + 
+  theme_bw()
+
+```
+
+* The **Not Hispanic or Latino** ethnic community has a **greater percentage (59%) ** of the **Loans originated** compared to the **Hispanic or Latino** community which has around **(49%)**.             
+
+* The **Not Hispanic or Latino** ethnic community has a **Lesser percentage (19%) ** of the **Application denied by the Financial institution** compared to the **Hispanic or Latino** community which has around **(25%)**.  
+
+#Race and the Loan Origination Process
+
+##Races
+
+We explore the various races which have been associated with the loan origination process.
+
+```{r, message=FALSE, warning=FALSE}
+
+homeMortgageStatus_applicant_race1 = homeMortgage %>% group_by(action_taken_name,applicant_race_name_1) %>%
+  summarise(CountOfActionTaken = n()) %>%
+  arrange(desc(CountOfActionTaken))
+
+homeMortgage_applicant_race1 = homeMortgage %>% group_by(applicant_race_name_1) %>%
+  summarise(CountOfRace1 = n()) %>%
+  arrange(desc(CountOfRace1))
+
+ggplot(homeMortgage_applicant_race1, aes(x = reorder(applicant_race_name_1, CountOfRace1), 
+                                   y = CountOfRace1)) +
+  geom_bar(stat='identity',colour="white", fill =fillColor) +
+  geom_text(aes(x = applicant_race_name_1, y = 1, label = paste0("(",round(CountOfRace1),")",sep="")),
+            hjust=0, vjust=.5, size = 4, colour = 'black',
+            fontface = 'bold') +
+  labs(x = 'Race Name', y = 'Count Of Action Taken', title = 'Actions in Loans by Race') +
+  coord_flip() + 
+  theme_bw()
+
+
+```
+
+The **White** community applies for the largest percentage of loans.          
+
+
+##Loan Status and Race
+
+```{r, message=FALSE, warning=FALSE}
+
+homeMortgageStatus_race = inner_join(homeMortgageStatus_applicant_race1,homeMortgage_applicant_race1) %>%
+  mutate(percentage = (CountOfActionTaken/CountOfRace1) * 100 ) 
+
+
+ggplot(homeMortgageStatus_race, aes(x = reorder(action_taken_name, percentage), 
+                                          y = percentage)) +
+  geom_bar(stat='identity',colour="white", fill =fillColor) +
+  facet_wrap(~ applicant_race_name_1) +
+  geom_text(aes(x = action_taken_name, y = 1, label = paste0("(",round(percentage),"%)",sep="")),
+            hjust=0, vjust=.5, size = 4, colour = 'black',
+            fontface = 'bold') +
+  labs(x = 'Action', y = '%age Count Of Action Taken', title = 'Actions in Loans by Race') +
+  coord_flip() + 
+  theme_bw()
+
+```
+
+The **Loan Origination percentage** for the **White and Asian community** is higher than the **Black or Asian** community.
+
+#Applicant Income Distribution
+
+```{r, message=FALSE, warning=FALSE}
+
+actionStatus = "Loan originated"
+breaks = seq(0,400,50)
+
+homeMortgage %>%
+  filter(action_taken_name == actionStatus ) %>%
+ggplot(aes(applicant_income_000s)) +
+  scale_x_continuous(limits = c(0, 400),breaks=breaks ) +
+  geom_histogram(binwidth = 10,,fill = c("red")) +
+  labs(x = 'Income in Thousands', y = 'Count', title = 'Loan Originated Applicant Income distribution') +  theme_bw()
+
+```
+
+We observe that **MOST** of the loans which are originated have applicants with income around **Sixty Thousand to Seventy Five thousand dollars**.         
+
+
+#Loan Purpose Types
+
+We investigate the different loan Purpose Types associated with the loans.
+
+##Loan Purpose Types distribution
+
+```{r, message=FALSE, warning=FALSE}
+
+homeMortgage %>%
+  filter(!is.na(loan_purpose_name)) %>%
+  group_by(loan_purpose_name) %>%
+  summarise(CountLoanPurpose = n() ) %>%
+  mutate(percentage = ( CountLoanPurpose/sum(CountLoanPurpose) ) *100 ) %>%
+  mutate(loan_purpose_name = reorder(loan_purpose_name, percentage)) %>%
+  
+  ggplot(aes(x = loan_purpose_name,y = percentage)) +
+  geom_bar(stat='identity',colour="white", fill =fillColor2) +
+  geom_text(aes(x = loan_purpose_name, y = 1, label = paste0("( ",round(percentage),"% )",sep="")),
+            hjust=0, vjust=.5, size = 4, colour = 'black',
+            fontface = 'bold') +
+  labs(x = 'Loan Purpose', y = 'Count', title = 'Loans Purpose Types') +
+  coord_flip() + 
+  theme_bw()
+
+```
+
+**Home Purchase** and **Refinancing** are the major Loan Purpose types.
+
+##Loan purpose types and their actions
+
+The following bar graph shows the Loan Purpose Types along with the different actions. 
+
+```{r, message=FALSE, warning=FALSE}
+homeMortgage %>%
+  filter(!is.na(loan_purpose_name)) %>%
+  group_by(loan_purpose_name,action_taken_name) %>%
+  summarise(CountLoanPurpose = n() ) %>%
+  
+  ggplot(aes(x = loan_purpose_name,y = CountLoanPurpose,fill =(action_taken_name))) +
+  geom_bar(stat='identity',colour="white") +
+  labs(x = 'Loan Purpose', y = 'Count', title = 'Loans Purpose Types Distribution with Action Types') +
+  theme_bw()
+ 
+
+```
+
+
+#County types
+
+We investigate the different County Types associated with the loans.
+
+##Top 10 Counties distribution
+
+We display the Top 10 Counties associated with loans.          
+
+
+```{r, message=FALSE, warning=FALSE}
+
+homeMortgage %>%
+  filter(!is.na(county_name)) %>%
+  group_by(county_name) %>%
+  summarise(CountLoanPurpose = n() ) %>%
+  mutate(percentage = ( CountLoanPurpose/sum(CountLoanPurpose) ) *100 ) %>%
+  mutate(county_name = reorder(county_name, percentage)) %>%
+  arrange(desc(percentage)) %>%
+  head(10) %>%
+  
+  ggplot(aes(x = county_name,y = percentage)) +
+  geom_bar(stat='identity',colour="white", fill =fillColor2) +
+  geom_text(aes(x = county_name, y = 1, label = paste0("( ",round(percentage,2),"% )",sep="")),
+            hjust=0, vjust=.5, size = 4, colour = 'black',
+            fontface = 'bold') +
+  labs(x = 'County Name', y = 'Count', title = 'County and Loans') +
+  coord_flip() + 
+  theme_bw()
+
+```
+
+##Counties and Loan distribution
+
+We display the Counties and the Loans Type distribution.       
+
+
+```{r, message=FALSE, warning=FALSE}
+Top10Counties = homeMortgage %>%
+  filter(!is.na(county_name)) %>%
+  group_by(county_name) %>%
+  summarise(CountLoanPurpose = n() ) %>%
+  mutate(percentage = ( CountLoanPurpose/sum(CountLoanPurpose) ) *100 ) %>%
+  mutate(county_name = reorder(county_name, percentage)) %>%
+  arrange(desc(percentage)) %>%
+  head(10)
+
+homeMortgage %>%
+  filter(!is.na(county_name)) %>%
+  filter(county_name %in% Top10Counties$county_name) %>%
+  group_by(county_name,action_taken_name) %>%
+  summarise(CountLoanPurpose = n() ) %>%
+  
+  
+  ggplot(aes(x = county_name,y = CountLoanPurpose,fill = action_taken_name)) +
+  geom_bar(stat='identity',colour="white") +
+  labs(x = 'County Name', y = 'Count', title = 'County Distribution with Action Types') +
+  theme_bw() + theme(legend.position="top") 
+
+```
+
+#Modelling using Classification and Regression Trees
+
+We predict whether the status of the Loan would be **Loan originated** or not. The following tree shows the conditions which would be used to determine whether the would be **Loan originated** or not.
+
+## Select Columns for modelling
+
+Here we select the columns which would be required for modelling.We make the columns as factors so that they can be used for the CART model.              
+
+
+```{r, message=FALSE, warning=FALSE}
+
+selectedCols = c("action_taken","applicant_ethnicity",        
+"applicant_income_000s","applicant_race_1","co_applicant_ethnicity",
+"co_applicant_sex", "county_code","hoepa_status","lien_status",
+"loan_purpose","loan_type","msamd",                                              
+"owner_occupancy","preapproval",
+"property_type","purchaser_type","loan_amount_000s")
+
+
+homeMortgage_selectedCols = homeMortgage %>% select(selectedCols) %>%
+  mutate(isLoanOriginated = FALSE)  %>%
+  mutate(isLoanOriginated = replace(isLoanOriginated, action_taken == 1, TRUE)) %>%
+  select(-action_taken)
+
+homeMortgage_selectedCols$applicant_ethnicity = as.factor(homeMortgage_selectedCols$applicant_ethnicity)
+homeMortgage_selectedCols$applicant_race_1 = as.factor(homeMortgage_selectedCols$applicant_ethnicity)
+homeMortgage_selectedCols$co_applicant_ethnicity = as.factor(homeMortgage_selectedCols$co_applicant_ethnicity)
+homeMortgage_selectedCols$co_applicant_sex = as.factor(homeMortgage_selectedCols$co_applicant_sex)
+homeMortgage_selectedCols$county_code = as.factor(homeMortgage_selectedCols$county_code)
+homeMortgage_selectedCols$hoepa_status =  as.factor(homeMortgage_selectedCols$hoepa_status)
+homeMortgage_selectedCols$lien_status =  as.factor(homeMortgage_selectedCols$lien_status)
+homeMortgage_selectedCols$loan_purpose =  as.factor(homeMortgage_selectedCols$loan_purpose)
+homeMortgage_selectedCols$loan_type =  as.factor(homeMortgage_selectedCols$loan_type)
+homeMortgage_selectedCols$owner_occupancy =  as.factor(homeMortgage_selectedCols$owner_occupancy)  
+homeMortgage_selectedCols$preapproval =  as.factor(homeMortgage_selectedCols$preapproval)  
+homeMortgage_selectedCols$property_type =  as.factor(homeMortgage_selectedCols$property_type) 
+homeMortgage_selectedCols$purchaser_type =  as.factor(homeMortgage_selectedCols$purchaser_type) 
+```
+
+
+##Build and Visualize the CART model
+
+We build and visualize the CART model. Through this model, we can examine the most important features which impact the decision for **Loan Origination**.       
+
+```{r, message=FALSE, warning=FALSE}
+set.seed(3000)
+split = sample.split(homeMortgage_selectedCols$isLoanOriginated, SplitRatio = 0.7)
+Train = subset(homeMortgage_selectedCols, split==TRUE)
+Test = subset(homeMortgage_selectedCols, split==FALSE)
+   
+# CART model
+homeMortgageTree = rpart(isLoanOriginated ~ ., method="class", data = Train, control=rpart.control(minbucket=5))
+
+prp(homeMortgageTree)
+
+```
+
+From the Tree , we have the following observations :
+
+* **Lien Status** is the most important feature since it is the first feature used to take the decision.
+    
+* **Purchase Status** is the Second feature used for modelling
+
+* **Loan Purchase** , **Loan Type** , **County**  and **Loan Amount** are the other features used for building the Tree.       
+
+
+# Loan Origination Influencers
+
+We would like to investigate which factors influence the decision that the loan would have the final status of **Loan Origination**. For this we build a **XGBoost** model on the data so as to find the importance of the various factors in deciding whether the loan would be **Loan originated** or not.
+
+```{r, message=FALSE, warning=FALSE}
+
+dmy <- dummyVars(" ~ .", data = homeMortgage_selectedCols, fullRank=T)
+homeMortgage_selectedCols2 <- data.frame(predict(dmy, newdata = homeMortgage_selectedCols))
+
+
+homeMortgage_selectedCols2 = homeMortgage_selectedCols2 %>% select(-isLoanOriginatedTRUE)
+
+homeMortgage_selectedCols2$isLoanOriginated = homeMortgage_selectedCols$isLoanOriginated
+
+features <- colnames(homeMortgage_selectedCols2)
+
+for (f in features) {
+  if ((class(homeMortgage_selectedCols2[[f]])=="factor") || (class(homeMortgage_selectedCols2[[f]])=="character")) {
+    levels <- unique(homeMortgage_selectedCols2[[f]])
+    homeMortgage_selectedCols2[[f]] <- as.numeric(factor(homeMortgage_selectedCols2[[f]], levels=levels))
+  }
+}
+
+
+formula = isLoanOriginated ~ .
+
+fitControl <- trainControl(method="none",classProbs = TRUE)
+
+xgbGrid <- expand.grid(nrounds = 100,
+                       max_depth = 3,
+                       eta = .05,
+                       gamma = 0,
+                       colsample_bytree = .8,
+                       min_child_weight = 1,
+                       subsample = 1)
+
+
+set.seed(13)
+
+homeMortgage_selectedCols2$isLoanOriginated = as.factor(homeMortgage_selectedCols2$isLoanOriginated)
+levels(homeMortgage_selectedCols2$isLoanOriginated) = c("No","Yes")
+
+homeMortgageXGB = train(formula, data = homeMortgage_selectedCols2,
+                   method = "xgbTree",trControl = fitControl,
+                   tuneGrid = xgbGrid,na.action = na.pass)
+
+
+importance = varImp(homeMortgageXGB)
+
+
+
+varImportance <- data.frame(Variables = row.names(importance[[1]]), 
+                            Importance = round(importance[[1]]$Overall,2))
+
+# Create a rank variable based on importance
+rankImportance <- varImportance %>%
+  mutate(Rank = paste0('#',dense_rank(desc(Importance)))) %>%
+  head(20)
+
+rankImportancefull = rankImportance
+
+ggplot(rankImportance, aes(x = reorder(Variables, Importance), 
+                           y = Importance)) +
+  geom_bar(stat='identity',colour="white", fill = fillColor) +
+  geom_text(aes(x = Variables, y = 1, label = Rank),
+            hjust=0, vjust=.5, size = 4, colour = 'black',
+            fontface = 'bold') +
+  labs(x = 'Variables', title = 'Relative Variable Importance') +
+  coord_flip() + 
+  theme_bw()
+
+```
+
+The graph shows the factors which affect the decision of **Loan Origination** is provided below.
+
+All the factors affecting the decision of **Loan Origination** along with their ranks is provided below
+
+```{r, result='asis', echo=FALSE}
+
+datatable(rankImportancefull, style="bootstrap", class="table-condensed", options = list(dom = 'tp',scrollX = TRUE))
+```
+
+
+#Lien Status
+
+We examine the distribution of Lien Status and also the associated Loan Action.
+
+```{r, message=FALSE, warning=FALSE}
+
+lienData = homeMortgage %>% 
+  group_by(action_taken_name,lien_status_name) %>%
+  tally()
+
+```
+
+```{r, message=FALSE, warning=FALSE}
+  ggplot(lienData,aes(x = lien_status_name,y = n,fill = action_taken_name)) +
+  geom_bar(stat='identity',colour="white") +
+  labs(x = 'Lien Status', y = 'Count', title = 'Lien Status Distribution with Action Types') +
+  theme_bw() + theme(legend.position="top") 
+
+```
+
+We observe that if the Lien Status is **Not Applicable** all of the Loans have status as Loan purchased by the financial institution.
+
+#Purchase Type distribution with Loan Action         
+
+We examine the Purchase Type distribution with the Loan action in the following bar graph
+
+```{r, message=FALSE, warning=FALSE}
+
+purchaseTypeData = homeMortgage %>% group_by(action_taken_name,purchaser_type_name) %>%
+  tally()
+
+```
+
+```{r, message=FALSE, warning=FALSE}
+ ggplot(purchaseTypeData, aes(x = purchaser_type_name,y = n,fill = action_taken_name)) +
+  geom_bar(stat='identity',colour="white") +
+  coord_flip() +
+  labs(x = 'Purchase Type', y = 'Count', title = 'Purchase Type Distribution with Action Types') +
+  theme_bw() + theme(legend.position="top") 
+
+```
