@@ -14,4 +14,4 @@ The URL to the kernel is {https://www.kaggle.com/ambarish/eda-home-mortgage-ny-w
 
 
 Problem Identification
-The dataset we have contains all mortgage decisions made in 2015 for the state of New York. 
+The dataset we have contains all mortgage decisions made in 2015 for the state of New York. The final managerial objective is to predict 
