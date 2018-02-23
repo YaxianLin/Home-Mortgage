@@ -10,10 +10,13 @@ The URL to the kernel is {https://www.kaggle.com/ambarish/eda-home-mortgage-ny-w
 
 
 ## Problem Identification
-The dataset we have contains all mortgage decisions made in 2015 for the state of New York. The final managerial objective is to predict mortgage decisions based on other informations. 
+The dataset we have contains all mortgage decisions made in 2015 for the state of New York. The final managerial objective is helping banks to decided their mortgage decisions based on customers' information. 
 
 ```{r}
-read.csv(file.choose(), header = T)
+homeMortgage <-read.csv(file.choose())
+ls(homeMortgage)
+unique(homeMortgage$action_taken_name)
+unique(homeMortgage$action_taken)
 ```
-
+As you can see, there are 78 variables in the dataset. It is 
 
