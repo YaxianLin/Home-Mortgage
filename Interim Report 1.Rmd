@@ -12,17 +12,25 @@ The URL to the kernel is {https://www.kaggle.com/ambarish/eda-home-mortgage-ny-w
 ## Problem Identification
 The dataset we have contains all mortgage decisions made in 2015 for the state of New York. The final managerial objective is helping banks to decided their mortgage decisions based on customers' information. To be more specific, whether the banks should give the mortage and the amount of the loan. 
 
+## Data Inspection
 ```{r}
 library(ggplot2)
 library(dplyr)
 
 Mortgage <-read.csv(file.choose())
 ls(Mortgage)
-unique(Mortgage$action_taken_name)
-unique(Mortgage$action_taken)
+unique(Mortgage$applicant_sex_name)
+unique(Mortgage$applicant_sex)
+unique(Mortgage$owner_occupancy_name)
+
 ```
 As you can see, there are 78 variables in the dataset. It is redundant to describe the mearsurement types of all 78 variables. Besides, some of them illustrate the same thing, such as "action_taken" and "action_taken_name". Hence, we will only describe several important variables as examples.  
-In general, most variables in the data are nominal variables. For example, "action_taken" indicates the 7 different result of loan application. All variables relevant to applicant except "applicant_income_000s", such as race or gender, are nominal variables. "applicant_income_000s" is a ratio scale variabe, showing the incomel level of the applicant. "loan_amount_000s" and "census_tract_number" are also ratio scale variables while "as_of_year" is a rare interval variable in this dataset.
+In general, the 78 variables can be divided into 4 subjects. 
+* applicant: ethnicity, race, sex,income level and so on
+* lender: agency
+* property: property type, occupancy of the property, location of the property and so on
+* mortage information: action, amount, lien status, type and purpose
+Most variables in the data are nominal variables. All variables relevant to applicant except "applicant_income_000s", such as race or gender, are nominal variables or we can say categorical variables. "applicant_income_000s" is a ratio scale variabe, showing the incomel level of the applicant. "loan_amount_000s" and "census_tract_number" are also ratio scale variables while "as_of_year" is a rare interval variable in this dataset.
 
 ```{r}
 ## density histogram of action taken on loan
