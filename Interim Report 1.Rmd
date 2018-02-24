@@ -30,6 +30,7 @@ In general, the 78 variables can be divided into 4 subjects.
 * lender: agency
 * property: property type, occupancy of the property, location of the property and so on
 * mortage information: action, amount, lien status, type and purpose
+
 Most variables in the data are nominal variables. All variables relevant to applicant except "applicant_income_000s", such as race or gender, are nominal variables or we can say categorical variables. "applicant_income_000s" is a ratio scale variabe, showing the incomel level of the applicant. "loan_amount_000s" and "census_tract_number" are also ratio scale variables while "as_of_year" is a rare interval variable in this dataset.
 
 ```{r}
