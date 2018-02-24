@@ -1,6 +1,6 @@
 ---
 title: "Interim Report 1"
-author: "Yaxian Lin"
+author: "Yaxian Lin" "Chenlu Jiang"
 date: "2018/2/21"
 output: word_document
 ---
@@ -10,28 +10,29 @@ The URL to the kernel is {https://www.kaggle.com/ambarish/eda-home-mortgage-ny-w
 
 
 ## Problem Identification
-The dataset we have contains all mortgage decisions made in 2015 for the state of New York. The final managerial objective is helping banks to decided their mortgage decisions based on customers' information. To be more specific, whether the banks should give the mortage and the amount of the loan. 
+The dataset we have contains all mortgage decisions made in 2015 for the state of New York. The data problems for the dataset are that there are too many potential determined variables for loan origination, some of them have numerous missing data and some of them are repetitive. For our final managerial objective: helping banks to find out what essential variables determine the loan origination, we need to clean, tidy and deal with the data to figure out a reasonable model to solve the problem.
 
-## Data Inspection
-```{r}
+```{r warning = FALSE, message = FALSE}
 library(ggplot2)
 library(dplyr)
 
 Mortgage <-read.csv(file.choose())
 ls(Mortgage)
-unique(Mortgage$applicant_sex_name)
-unique(Mortgage$applicant_sex)
-unique(Mortgage$owner_occupancy_name)
-
+unique(Mortgage$action_taken_name)
+unique(Mortgage$action_taken)
 ```
 As you can see, there are 78 variables in the dataset. It is redundant to describe the mearsurement types of all 78 variables. Besides, some of them illustrate the same thing, such as "action_taken" and "action_taken_name". Hence, we will only describe several important variables as examples.  
-In general, the 78 variables can be divided into 4 subjects. 
-* applicant: ethnicity, race, sex,income level and so on
-* lender: agency
-* property: property type, occupancy of the property, location of the property and so on
-* mortage information: action, amount, lien status, type and purpose
+In general, most variables in the data are nominal variables. For example, "action_taken" indicates the 7 different result of loan application. All variables relevant to applicant except "applicant_income_000s", such as race or gender, are nominal variables. "applicant_income_000s" is a ratio scale variabe, showing the incomel level of the applicant. "loan_amount_000s" and "census_tract_number" are also ratio scale variables while "as_of_year" is a rare interval variable in this dataset.
 
-Most variables in the data are nominal variables. All variables relevant to applicant except "applicant_income_000s", such as race or gender, are nominal variables or we can say categorical variables. "applicant_income_000s" is a ratio scale variabe, showing the incomel level of the applicant. "loan_amount_000s" and "census_tract_number" are also ratio scale variables while "as_of_year" is a rare interval variable in this dataset.
+## Missing Data
+
+First for some of the categorical variables using interger as category, we change them into factor. For variables with more than 50% missing data, such as rate_spread, applicant-race_2/3/4/5, denial_reason_1/2/3 etc., we decide to straightly delete them. For numeric variables with some missing data, we decide to use mean value to replace the missing value. Here we use census_tract_number as an example to present. For categorical varibles which have more than two catrgories with some missing data, we decide to use the mode category to replace the missing value. Last for the dummy variables with some missing data, we decide to use "00" meaning unknown to replace the missing value (assuming that dummy labels are "0" and "1").
+
+```{r}
+str(Mortgage)
+summary(Mortgage)
+Mortgage$census_tract_number[is.na(Mortgage$census_tract_number)] = mean(Mortgage$census_tract_number, na.rm = TRUE)
+```
 
 ```{r}
 ## density histogram of action taken on loan
@@ -45,6 +46,32 @@ ggplot(action, aes(x =action_taken, y = p)) +
 ```
 
 ```{r}
+## density plot for gender
+Mortgage$applicant_sex[Mortgage$applicant_sex == 1] = "Female"
+Mortgage$applicant_sex[Mortgage$applicant_sex == 2] = "Male"
+Mortgage$applicant_sex[Mortgage$applicant_sex == 3] = "Noinfo"
+Mortgage$applicant_sex[Mortgage$applicant_sex == 4] = "Noapp"
+den_gender <- Mortgage %>%
+  ggplot(aes(x=applicant_sex)) +
+  geom_density(alpha=0.5, color="darkblue") +
+  ggtitle("density plot for gender") +
+  labs(x = "gender")
+den_gender
+```
+```{r}
+## Income distrubution via gender
+Mortgage %>%
+  ggplot(aes(applicant_income_000s)) +
+  geom_histogram() +
+  facet_wrap(~applicant_sex) +
+  ggtitle("Income distrubution via gender") +
+  xlab("Income") +
+  scale_x_continuous(limits = c(0,500))
+  
+```
+  
+
+```{r}
 ##  income distribution of loan originated applicants
 Mortgage %>%
   filter(action_taken == '1') %>%
@@ -53,4 +80,3 @@ Mortgage %>%
   scale_x_continuous(limits = c(0, 400),breaks=seq(0,400,40) )+
   labs(x = 'Income in Thousands', y = 'Count', title = 'Income distribution of loan originated applicants')
 ```
-
