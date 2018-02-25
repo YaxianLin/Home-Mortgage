@@ -82,6 +82,20 @@ den_gender <- Mortgage %>%
 den_gender
 ```
 
+## Histogram for Ethnicity
+```{r}
+Mortgage$applicant_ethnicity[Mortgage$applicant_ethnicity == 1] = "Hispanic or Latino"
+Mortgage$applicant_ethnicity[Mortgage$applicant_ethnicity == 2] = "Not Hispanic or Latino"
+Mortgage$applicant_ethnicity[Mortgage$applicant_ethnicity == 3] = "Info Not Available"
+Mortgage$applicant_ethnicity[Mortgage$applicant_ethnicity == 4] = "Not Applicable"
+ethnicity = Mortgage %>% group_by(applicant_ethnicity) %>%
+  summarise(count = n()) %>%
+  mutate(p = count/sum(count) * 100)
+ggplot(ethnicity, aes(x = applicant_ethnicity, y = p)) +
+  geom_bar(stat='identity',colour="white")+
+  labs(x='applicant ethnicity', y='pencentage',title='Ethnicity of Mortgage Applicants')
+```
+
 ```{r}
 ##Income distribution via loan origination
 Mortgage$lo <- 'unoriginated'
