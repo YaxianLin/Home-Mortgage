@@ -12,7 +12,7 @@ The URL to the kernel is {https://www.kaggle.com/ambarish/eda-home-mortgage-ny-w
 ## Problem Identification
 The dataset we have contains all mortgage decisions made in 2015 for the state of New York. The data problems for the dataset are that there are too many potential determined variables for loan origination, some of them have numerous missing data and some of them are repetitive. For our final managerial objective: helping banks to find out what essential variables determine the loan origination, we need to clean, tidy and deal with the data to figure out a reasonable model to solve the problem.
 
-<<<<<<< HEAD
+
 ## Data Inspection
 ```{r warning = FALSE, message = FALSE}
 library(ggplot2)
@@ -33,7 +33,7 @@ In general, the 78 variables can be divided into 4 subjects.
 
 In general, most variables in the data are nominal variables. For example, "action_taken" indicates the 7 different result of loan application. All variables relevant to applicant except "applicant_income_000s", such as race or gender, are nominal variables. "applicant_income_000s" is a ratio scale variabe, showing the incomel level of the applicant. "loan_amount_000s" and "census_tract_number" are also ratio scale variables while "as_of_year" is a rare interval variable in this dataset.
 
-=======
+
 ## Missing Data
 
 First for some of the categorical variables using interger as category, we change them into factor. For variables with more than 50% missing data, such as rate_spread, applicant-race_2/3/4/5, denial_reason_1/2/3 etc., we decide to straightly delete them. For numeric variables with some missing data, we decide to use mean value to replace the missing value. Here we use census_tract_number as an example to present. For categorical varibles which have more than two catrgories with some missing data, we decide to use the mode category to replace the missing value. Last for the dummy variables with some missing data, we decide to use "00" meaning unknown to replace the missing value (assuming that dummy labels are "0" and "1").
@@ -55,8 +55,8 @@ ggplot(action, aes(x =action_taken, y = p)) +
   geom_bar(stat='identity',colour="white")+
   labs(x='action_taken', y='pencenrage',title='mortage action')
 ```
-<<<<<<< HEAD
-=======
+
+
 ## density plot for gender
 ```{r}
 Mortgage$applicant_sex[Mortgage$applicant_sex == 1] = "Female"
@@ -84,10 +84,14 @@ Mortgage %>%
   
 ##  income distribution of loan originated applicants
 ```{r}
+Mortgage$lo <- 'unoriginated'
+Mortgage$lo[Mortgage$action_taken_name == 'Loan originated'] <- 'originated'
 Mortgage %>%
-  filter(action_taken == '1') %>%
-  ggplot(aes(applicant_income_000s))  +
+  ggplot(aes(loan_amount_000s))  +
   geom_histogram(binwidth = 10) +
-  scale_x_continuous(limits = c(0, 400),breaks=seq(0,400,40) )+
-  labs(x = 'Income in Thousands', y = 'Count', title = 'Income distribution of loan originated applicants')
+  facet_wrap(~lo) +
+  labs(x = 'loan amount', y = 'Count', title = 'Loan amount distribution via originated and unoriginated ') +
+  scale_x_continuous(limits = c(0, 1000) )
+
+  
 ```
