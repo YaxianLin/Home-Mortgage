@@ -82,10 +82,8 @@ Mortgage %>%
   
 ```
   
-
-```{r}
 ##  income distribution of loan originated applicants
-
+```{r}
 Mortgage %>%
   filter(action_taken == '1') %>%
   ggplot(aes(applicant_income_000s))  +
