@@ -33,6 +33,15 @@ In general, the 78 variables can be divided into 4 subjects.
 
 In general, most variables in the data are nominal variables. For example, "action_taken" indicates the 7 different result of loan application. All variables relevant to applicant except "applicant_income_000s", such as race or gender, are nominal variables. "applicant_income_000s" is a ratio scale variabe, showing the incomel level of the applicant. "loan_amount_000s" and "census_tract_number" are also ratio scale variables while "as_of_year" is a rare interval variable in this dataset.
 
+## Table summarizing range in each variable
+```{r}
+Mortgage <-read.csv(file.choose())
+install.packages("pastecs")
+library(pastecs)
+NumVar <- sapply(Mortgage, is.numeric)
+stat.desc(Mortgage[, NumVar])[c("min", "max", "range", "median", "mean"),]
+```
+As mentioned above, there are 78 variables in this dataset. Only 44 of them are numerical variables. It only makes sense to compute range and other descriptive statistics for numerical variables only. Therefore, subset NumVar is created to contain all numerical variables in the Mortgage dataset. Then the stat.desc function from the pastecs package is used to compute range and other descriptive statistics of variables in subset NumVar. Notably, the stat.desc function computes 14 kinds of statistics and most of them are not necessary in this case. Thus, only min, max, range, median, and mean are included in the table.  
 
 ## Missing Data
 
@@ -43,6 +52,7 @@ str(Mortgage)
 summary(Mortgage)
 Mortgage$census_tract_number[is.na(Mortgage$census_tract_number)] = mean(Mortgage$census_tract_number, na.rm = TRUE)
 ```
+
 ## density histogram of action taken on loan
 ```{r}
 library(ggplot2)
