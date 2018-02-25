@@ -10,7 +10,7 @@ The URL to the kernel is {https://www.kaggle.com/ambarish/eda-home-mortgage-ny-w
 
 
 ## Problem Identification
-The dataset we have contains all mortgage decisions made in 2015 for the state of New York. The data problems for the dataset are that there are too many potential determined variables for loan origination, some of them have numerous missing data and some of them are repetitive. For our final managerial objective: helping banks to find out what essential variables determine the loan origination, we need to clean, tidy and deal with the data to figure out a reasonable model to solve the problem.
+The dataset we have contains all mortgage decisions made in 2015 for the state of New York. The data problems for the dataset are that there are too many potential determined variables for loan origination, some of them have numerous missing data and some of them are repetitive. For our final managerial objective: helping banks to find out what essential variables and how do them determine the loan origination, we need to clean, tidy and deal with the data to figure out a reasonable model to solve the problem.
 
 
 ## Data Inspection
