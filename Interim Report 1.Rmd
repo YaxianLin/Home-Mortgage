@@ -1,6 +1,6 @@
 ---
 title: "Interim Report 1"
-author: "Yaxian Lin" "Chenlu Jiang"
+author: "Yaxian Lin" "Chenlu Jiang" "Jingwen Wu"
 date: "2018/2/21"
 output: word_document
 ---
@@ -41,6 +41,7 @@ library(pastecs)
 NumVar <- sapply(Mortgage, is.numeric)
 stat.desc(Mortgage[, NumVar])[c("min", "max", "range", "median", "mean"),]
 ```
+
 As mentioned above, there are 78 variables in this dataset. Only 44 of them are numerical variables. It only makes sense to compute range and other descriptive statistics for numerical variables only. Therefore, subset NumVar is created to contain all numerical variables in the Mortgage dataset. Then the stat.desc function from the pastecs package is used to compute range and other descriptive statistics of variables in subset NumVar. Also, the stat.desc function computes 14 kinds of statistics and most of them are not necessary in this case. Thus, only min, max, range, median, and mean are included in the table. 
 
 Notably, most of the 44 numerical variables in this dataset are categorical data (action_taken, agency_code, applicant_race etc.). Statistics like min, max, mean do not have actual meaning for categorical data. Therefore, statistics included in the table are only meaningful to continuous/ordinal data variables, which include 9 variables: applicant_income_000s, hud_median_family_income, loan_amount_000s, number_of_1_to_4_family_units, number_of_owner_occupied_units, minority_population, population, rate_spread, tract_to_msamd_income. 
@@ -55,34 +56,40 @@ summary(Mortgage)
 Mortgage$census_tract_number[is.na(Mortgage$census_tract_number)] = mean(Mortgage$census_tract_number, na.rm = TRUE)
 ```
 
-## density histogram of action taken on loan
+## Histograms and density plots for key variables
+
+Histogram and density plots are computed for four key variables: action_taken, loan_amount, gender and applicant_ethnicity. 
+
+## Density histogram of action taken on loan
 ```{r}
 library(ggplot2)
 library(dplyr)
-action= Mortgage %>% group_by(action_taken) %>%
+action= Mortgage %>% group_by(action_taken_name) %>%
   summarise(count = n()) %>%
   mutate(p = count/sum(count) * 100)
 
-ggplot(action, aes(x =action_taken, y = p)) +
+ggplot(action, aes(x =action_taken_name, y = p)) +
   geom_bar(stat='identity',colour="white")+
-  labs(x='action_taken', y='pencenrage',title='mortage action')
+  labs(x='action_taken', y='percentage',title='mortgage action') +
+  coord_flip()
 ```
+The first thing we did was to inspect the key variable action_taken_name. According to the result, more than half of loans are originated. We need to find which factors make the difference.
 
-
-## density plot for gender
+## Histogram plot for gender
 ```{r}
 Mortgage$gender = "0"
-Mortgage$gender[Mortgage$applicant_sex == 1] = "Female"
-Mortgage$gender[Mortgage$applicant_sex == 2] = "Male"
+Mortgage$gender[Mortgage$applicant_sex == 1] = "Male"
+Mortgage$gender[Mortgage$applicant_sex == 2] = "Female"
 Mortgage$gender[Mortgage$applicant_sex == 3] = "Noinfo"
 Mortgage$gender[Mortgage$applicant_sex == 4] = "Noapp"
-den_gender <- Mortgage %>%
+his_gender <- Mortgage %>%
   ggplot(aes(x=gender)) +
-  geom_density(alpha=0.5, color="darkblue") +
-  ggtitle("density plot for gender") +
+  geom_bar() +
+  ggtitle("Histogram plot for gender") +
   labs(x = "gender")
-den_gender
+his_gender
 ```
+The histogram plot for gender shows than the number of male loan applicants are twice of the number of female loan applicants.
 
 ## Histogram for Ethnicity
 ```{r}
@@ -97,6 +104,26 @@ ggplot(ethnicity, aes(x = applicant_ethnicity, y = p)) +
   geom_bar(stat='identity',colour="white")+
   labs(x='applicant ethnicity', y='pencentage',title='Ethnicity of Mortgage Applicants')
 ```
+The histogram plot for ethnicity of the New York mortgage applicants in 2015 indicates that about 5% of the observations are Hispanic or Latino; 10% of the observations have no available ethnicity information in this dataset; 13% of the observations have their ethnicity information listed as “not applicable”; 72% of the observations are not Hispanic or Latino. 
+The histogram plot for gender of the New York mortgage applicants in 2015 shows that, out of 439,654 total observations, 119,877 (27.27%) of them are female; 242,175 (55.08%) of them are male; 27,163 (6.18%) of the observations did not provide gender information; 50,439 (11.47%) of the observations have their gender listed as “not applicable.” 
+
+
+
+
+## Density plot for income
+```{r}
+Mortgage %>%
+  ggplot(aes(x = applicant_income_000s)) +
+  geom_density(color = "black") +
+  scale_x_continuous(limits = c(0,800)) +
+  ggtitle("Density plot for income") +
+  xlab("income")
+```
+The left skewed density plot shows that most of the applicants' income concentrate on $8,000 to $10,000. And there are much less applicants with high income.
+
+## Bivariate frequency distribution
+
+In order to have a clearer data pattern, we first created a new variable called “lo”, dividing action taken data into originated loan and unoriginated regardless of the denial reasons. We then combined the new variable with applicant income level, loan amount, and applicant ethnicity to see whether any pattern exists.
 
 ## Income distribution via loan origination
 ```{r}
@@ -109,20 +136,30 @@ Mortgage %>%
   scale_x_continuous(limits = c(0, 800) ) 
 ```
 
+From the income distribution via loan origination plot, it is clear that the percentage of the loan originated increase first and then decrease along to the increasing income. Therefore, we can make a conclusion that applicants, with the income level at about $50,000 to $100,000,  are more likely to receive the loan. 
+
+
+
+## Loan amount distribution via loan origination
 ```{r}
 Mortgage %>%
-  ggplot(aes(loan_amount_000s))  +
-  geom_histogram(binwidth = 10) +
-  facet_wrap(~lo) +
+  ggplot(aes(loan_amount_000s, fill = lo))  +
+  geom_histogram(binwidth = 18, color = "darkblue") +
   labs(x = 'loan amount', y = 'Count', title = 'Loan amount distribution via originated and unoriginated ') +
   scale_x_continuous(limits = c(0, 1000) )
 ```
 
-## applicant ethnicity via loan origination
+The distribution of loan amount among loan originated and unoriginated are all left-skewed and it is hard to find a pattern between them. 
+
+
+## Applicant ethnicity via loan origination
 ```{r}
 library(gmodels)
 CrossTable(Mortgage$applicant_ethnicity_name, Mortgage$lo)
 ```
 
+The crosstable of applicant ethnicity and loan origination indicates that people who are not  Hispanic or Latino are more likely to have the loan originated. While 82.9% of the observations who had their mortgage applications approved are not Hispanic or Latino, 62.1% of the observations who had their mortgage applications denied are not Hispanic or Latino. Also, while 51.9% of the total applicants (regardless of ethnicity) had their loans approved, 59% of non-Hispanic or Latino applicants had their loan approved. 
 
+## Conclusion and future plan
 
+Through making plots and analysis above, we have seen some patterns within variables and between variables. For example, people with the income level between $50,000 to $100,000 are more likely to get loans. However, besides the applicant characters, we also believe some other variables are essential to determining the loan origination. We believe that location variables such as "State"; property type; loan related variables such as purpose of the loan and type of the loan; and lenders' character are all relevant to loan origination. We will consider to add some of these variables into our model.
