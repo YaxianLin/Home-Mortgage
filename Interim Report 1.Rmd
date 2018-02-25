@@ -59,34 +59,29 @@ ggplot(action, aes(x =action_taken, y = p)) +
 
 ## density plot for gender
 ```{r}
-Mortgage$applicant_sex[Mortgage$applicant_sex == 1] = "Female"
-Mortgage$applicant_sex[Mortgage$applicant_sex == 2] = "Male"
-Mortgage$applicant_sex[Mortgage$applicant_sex == 3] = "Noinfo"
-Mortgage$applicant_sex[Mortgage$applicant_sex == 4] = "Noapp"
+Mortgage$gender = "0"
+Mortgage$gender[Mortgage$applicant_sex == 1] = "Female"
+Mortgage$gender[Mortgage$applicant_sex == 2] = "Male"
+Mortgage$gender[Mortgage$applicant_sex == 3] = "Noinfo"
+Mortgage$gender[Mortgage$applicant_sex == 4] = "Noapp"
 den_gender <- Mortgage %>%
-  ggplot(aes(x=applicant_sex)) +
+  ggplot(aes(x=gender)) +
   geom_density(alpha=0.5, color="darkblue") +
   ggtitle("density plot for gender") +
   labs(x = "gender")
 den_gender
 ```
+
 ```{r}
-## Income distrubution via gender
-Mortgage %>%
-  ggplot(aes(applicant_income_000s)) +
-  geom_histogram() +
-  facet_wrap(~applicant_sex) +
-  ggtitle("Income distrubution via gender") +
-  xlab("Income") +
-  scale_x_continuous(limits = c(0,500))
-  
-```
-  
-##  income distribution of loan originated applicants
-```{r}
+##Income distribution via loan origination
 Mortgage$lo <- 'unoriginated'
 Mortgage$lo[Mortgage$action_taken_name == 'Loan originated'] <- 'originated'
-
+Mortgage %>%
+  ggplot(aes(applicant_income_000s))  +
+  geom_histogram(binwidth = 15) +
+  facet_wrap(~lo) +
+  labs(x = 'Income', y = 'Count', title = 'Income distribution via loan origination ') +
+  scale_x_continuous(limits = c(0, 800) )
 ```
 
 ```{r}
