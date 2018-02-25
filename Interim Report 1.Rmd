@@ -118,6 +118,11 @@ Mortgage %>%
   scale_x_continuous(limits = c(0, 1000) )
 ```
 
+## applicant ethnicity via loan origination
+```{r}
+library(gmodels)
+CrossTable(Mortgage$applicant_ethnicity_name, Mortgage$lo)
+```
 
 
 
