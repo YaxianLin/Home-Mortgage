@@ -33,6 +33,14 @@ In general, the 78 variables can be divided into 4 subjects.
 
 In general, most variables in the data are nominal variables. For example, "action_taken" indicates the 7 different result of loan application. All variables relevant to applicant except "applicant_income_000s", such as race or gender, are nominal variables. "applicant_income_000s" is a ratio scale variabe, showing the incomel level of the applicant. "loan_amount_000s" and "census_tract_number" are also ratio scale variables while "as_of_year" is a rare interval variable in this dataset.
 
+## Table summarizing range in each variable
+```{r}
+install.packages("pastecs")
+library(pastecs)
+NumVar <- sapply(Mortgage, is.numeric)
+stat.desc(Mortgage[, NumVar])[c("min", "max", "range", "median", "mean"),]
+```
+As mentioned above, there are 78 variables in this dataset. Only 44 of them are numerical variables. It only makes sense to compute range and other descriptive statistics for numerical variables only. Therefore, subset NumVar is created to contain all numerical variables in the Mortgage dataset. Then the stat.desc function from the pastecs package is used to compute range and other descriptive statistics of variables in subset NumVar. Notably, the stat.desc function computes 14 kinds of statistics and most of them are not necessary in this case. Thus, only min, max, range, median, and mean are included in the table.  
 
 ## Missing Data
 
@@ -43,6 +51,7 @@ str(Mortgage)
 summary(Mortgage)
 Mortgage$census_tract_number[is.na(Mortgage$census_tract_number)] = mean(Mortgage$census_tract_number, na.rm = TRUE)
 ```
+
 ## density histogram of action taken on loan
 ```{r}
 library(ggplot2)
@@ -59,36 +68,45 @@ ggplot(action, aes(x =action_taken, y = p)) +
 
 ## density plot for gender
 ```{r}
-Mortgage$applicant_sex[Mortgage$applicant_sex == 1] = "Female"
-Mortgage$applicant_sex[Mortgage$applicant_sex == 2] = "Male"
-Mortgage$applicant_sex[Mortgage$applicant_sex == 3] = "Noinfo"
-Mortgage$applicant_sex[Mortgage$applicant_sex == 4] = "Noapp"
+Mortgage$gender = "0"
+Mortgage$gender[Mortgage$applicant_sex == 1] = "Male"
+Mortgage$gender[Mortgage$applicant_sex == 2] = "Female"
+Mortgage$gender[Mortgage$applicant_sex == 3] = "Noinfo"
+Mortgage$gender[Mortgage$applicant_sex == 4] = "Noapp"
 den_gender <- Mortgage %>%
-  ggplot(aes(x=applicant_sex)) +
+  ggplot(aes(x=gender)) +
   geom_density(alpha=0.5, color="darkblue") +
   ggtitle("density plot for gender") +
   labs(x = "gender")
 den_gender
 ```
+
+## Histogram for Ethnicity
 ```{r}
-## Income distrubution via gender
-Mortgage %>%
-  ggplot(aes(applicant_income_000s)) +
-  geom_histogram() +
-  facet_wrap(~applicant_sex) +
-  ggtitle("Income distrubution via gender") +
-  xlab("Income") +
-  scale_x_continuous(limits = c(0,500))
-  
+Mortgage$applicant_ethnicity[Mortgage$applicant_ethnicity == 1] = "Hispanic or Latino"
+Mortgage$applicant_ethnicity[Mortgage$applicant_ethnicity == 2] = "Not Hispanic or Latino"
+Mortgage$applicant_ethnicity[Mortgage$applicant_ethnicity == 3] = "Info Not Available"
+Mortgage$applicant_ethnicity[Mortgage$applicant_ethnicity == 4] = "Not Applicable"
+ethnicity = Mortgage %>% group_by(applicant_ethnicity) %>%
+  summarise(count = n()) %>%
+  mutate(p = count/sum(count) * 100)
+ggplot(ethnicity, aes(x = applicant_ethnicity, y = p)) +
+  geom_bar(stat='identity',colour="white")+
+  labs(x='applicant ethnicity', y='pencentage',title='Ethnicity of Mortgage Applicants')
 ```
-  
-##  income distribution of loan originated applicants
+
+## Income distribution via loan origination
 ```{r}
 Mortgage$lo <- 'unoriginated'
 Mortgage$lo[Mortgage$action_taken_name == 'Loan originated'] <- 'originated'
-
+Mortgage %>%
+  ggplot(aes(applicant_income_000s))  +
+  geom_histogram(binwidth = 15) +
+  facet_wrap(~lo) +
+  labs(x = 'Income', y = 'Count', title = 'Income distribution via loan origination ') +
+  scale_x_continuous(limits = c(0, 800) )
 ```
-
+## loan amount distribution via loan origination
 ```{r}
 Mortgage %>%
   ggplot(aes(loan_amount_000s))  +
@@ -99,5 +117,9 @@ Mortgage %>%
 ```
 
 
-
+## applicant ethnicity via loan origination
+```{r}
+library(gmodels)
+CrossTable(Mortgage$applicant_ethnicity_name, Mortgage$lo)
+```
 
