@@ -86,12 +86,18 @@ Mortgage %>%
 ```{r}
 Mortgage$lo <- 'unoriginated'
 Mortgage$lo[Mortgage$action_taken_name == 'Loan originated'] <- 'originated'
+
+```
+
+```{r}
 Mortgage %>%
   ggplot(aes(loan_amount_000s))  +
   geom_histogram(binwidth = 10) +
   facet_wrap(~lo) +
   labs(x = 'loan amount', y = 'Count', title = 'Loan amount distribution via originated and unoriginated ') +
   scale_x_continuous(limits = c(0, 1000) )
-
-  
 ```
+
+
+
+
