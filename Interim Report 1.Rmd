@@ -96,8 +96,8 @@ ggplot(ethnicity, aes(x = applicant_ethnicity, y = p)) +
   labs(x='applicant ethnicity', y='pencentage',title='Ethnicity of Mortgage Applicants')
 ```
 
-```{r}
 ##Income distribution via loan origination
+```{r}
 Mortgage$lo <- 'unoriginated'
 Mortgage$lo[Mortgage$action_taken_name == 'Loan originated'] <- 'originated'
 Mortgage %>%
