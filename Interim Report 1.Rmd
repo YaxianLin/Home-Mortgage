@@ -101,11 +101,10 @@ ggplot(ethnicity, aes(x = applicant_ethnicity, y = p)) +
 Mortgage$lo <- 'unoriginated'
 Mortgage$lo[Mortgage$action_taken_name == 'Loan originated'] <- 'originated'
 Mortgage %>%
-  ggplot(aes(applicant_income_000s))  +
-  geom_histogram(binwidth = 15) +
-  facet_wrap(~lo) +
+  ggplot(aes(applicant_income_000s, fill = lo))  +
+  geom_histogram(binwidth = 15, alpha = 0.8, color = "darkblue") +
   labs(x = 'Income', y = 'Count', title = 'Income distribution via loan origination ') +
-  scale_x_continuous(limits = c(0, 800) )
+  scale_x_continuous(limits = c(0, 800) ) 
 ```
 
 ```{r}
