@@ -10,12 +10,12 @@ The URL to the Kaggle dataset is {https://www.kaggle.com/jboysen/ny-home-mortgag
 The URL to the kernel is {https://www.kaggle.com/ambarish/eda-home-mortgage-ny-with-feature-analysis/notebook}
 
 
-## Problem Identification
+# Problem Identification
 The dataset we have contains all mortgage decisions made in 2015 for the state of New York. The data problems for the dataset are that there are too many potential determined variables for loan origination, some of them have numerous missing data and some of them are repetitive. For our final managerial objective: helping banks to find out what essential variables determine the loan origination, we need to clean, tidy and deal with the data to figure out a reasonable model to solve the problem.
 
 
-## Data Inspection
-```{r}
+# Data Inspection
+```{r, eval=FALSE}
 library(ggplot2)
 library(dplyr)
 Mortgage <-read.csv("~/Downloads/ny_hmda_2015.csv")
@@ -23,17 +23,19 @@ ls(Mortgage)
 unique(Mortgage$applicant_sex_name)
 unique(Mortgage$applicant_sex)
 unique(Mortgage$owner_occupancy_name)
+unique(Mortgage$action_taken_name)
 ```
 As you can see, there are 78 variables in the dataset. It is redundant to describe the mearsurement types of all 78 variables. Besides, some of them illustrate the same thing, such as "action_taken" and "action_taken_name". Hence, we will only describe several important variables as examples.  
-In general, the 78 variables can be divided into 4 subjects. 
+In general, we divide the 78 variables into 5 subjects as kernel. 
 * applicant: ethnicity, race, sex,income level and so on
 * lender: agency
-* property: property type, occupancy of the property, location of the property and so on
+* property: property type, occupancy of the property, and so on
 * mortage information: action, amount, lien status, type and purpose
+* location: state, census tract 
 
-In general, most variables in the data are nominal variables. For example, "action_taken" indicates the 7 different result of loan application. All variables relevant to applicant except "applicant_income_000s", such as race or gender, are nominal variables. "applicant_income_000s" is a ratio scale variabe, showing the incomel level of the applicant. "loan_amount_000s" and "census_tract_number" are also ratio scale variables while "as_of_year" is a rare interval variable in this dataset.
+In general, most variables in the data are nominal variables. For example, "action_taken" indicates the 7 different result of loan application. All variables relevant to applicant except "applicant_income_000s", such as race or gender, are nominal variables. "applicant_income_000s" is a ratio scale variabe, showing the incomel level of the applicant. "loan_amount_000s" is also ratio scale variables while "as_of_year" is a rare interval variable in this dataset.
 
-## Table summarizing range in each variable
+# Table summarizing range in each variable
 ```{r}
 library(pastecs)
 NumVar <- sapply(Mortgage, is.numeric)
@@ -44,7 +46,7 @@ As mentioned above, there are 78 variables in this dataset. Only 44 of them are 
 
 Notably, most of the 44 numerical variables in this dataset are categorical data (action_taken, agency_code, applicant_race etc.). Statistics like min, max, mean do not have actual meaning for categorical data. Therefore, statistics included in the table are only meaningful to continuous/ordinal data variables, which include 9 variables: applicant_income_000s, hud_median_family_income, loan_amount_000s, number_of_1_to_4_family_units, number_of_owner_occupied_units, minority_population, population, rate_spread, tract_to_msamd_income. 
 
-## Missing Data
+# Missing Data
 
 First for some of the categorical variables using interger as category, we change them into factor. For variables with more than 50% missing data, such as rate_spread, applicant-race_2/3/4/5, denial_reason_1/2/3 etc., we decide to straightly delete them. For numeric variables with some missing data, we decide to use mean value to replace the missing value. Here we use census_tract_number as an example to present. For categorical varibles which have more than two catrgories with some missing data, we decide to use the mode category to replace the missing value. Last for the dummy variables with some missing data, we decide to use "00" meaning unknown to replace the missing value (assuming that dummy labels are "0" and "1").
 
@@ -54,7 +56,7 @@ summary(Mortgage)
 Mortgage$census_tract_number[is.na(Mortgage$census_tract_number)] = mean(Mortgage$census_tract_number, na.rm = TRUE)
 ```
 
-## Histograms and density plots for key variables
+# Histograms and density plots for key variables
 
 Histogram and density plots are computed for four key variables: action_taken, loan_amount, gender and applicant_ethnicity. 
 
@@ -71,7 +73,7 @@ ggplot(action, aes(x =action_taken_name, y = p)) +
   labs(x='action_taken', y='percentage',title='mortgage action') +
   coord_flip()
 ```
-The first thing we did was to inspect the key variable action_taken_name. According to the result, more than half of loans are originated. We need to find which factors make the difference.
+Like the Kernel, the first thing we did was to inspect the key variable action_taken_name. According to the result, more than half of loans are originated. We need to find which factors make the difference.
 
 ## Histogram plot for gender
 ```{r}
@@ -117,9 +119,9 @@ Mortgage %>%
   ggtitle("Density plot for income") +
   xlab("income")
 ```
-The left skewed density plot shows that most of the applicants' income concentrate on $8,000 to $10,000. And there are much less applicants with high income.
+The left skewed density plot shows that most of the applicants' income concentrate on around $50. And there are much less applicants with high income.
 
-## Bivariate frequency distribution
+# Bivariate frequency distribution
 
 In order to have a clearer data pattern, we first created a new variable called “lo”, dividing action taken data into originated loan and unoriginated regardless of the denial reasons. We then combined the new variable with applicant income level, loan amount, and applicant ethnicity to see whether any pattern exists.
 
@@ -158,6 +160,7 @@ CrossTable(Mortgage$applicant_ethnicity_name, Mortgage$lo)
 
 The crosstable of applicant ethnicity and loan origination indicates that people who are not  Hispanic or Latino are more likely to have the loan originated. While 82.9% of the observations who had their mortgage applications approved are not Hispanic or Latino, 62.1% of the observations who had their mortgage applications denied are not Hispanic or Latino. Also, while 51.9% of the total applicants (regardless of ethnicity) had their loans approved, 59% of non-Hispanic or Latino applicants had their loan approved. 
 
-## Conclusion and future plan
+# discussion of data patern
 
 Through making plots and analysis above, we have seen some patterns within variables and between variables. For example, people with the income level between $50,000 to $100,000 are more likely to get loans. However, besides the applicant characters, we also believe some other variables are essential to determining the loan origination. We believe that location variables such as "State"; property type; loan related variables such as purpose of the loan and type of the loan; and lenders' character are all relevant to loan origination. We will consider to add some of these variables into our model.
+
