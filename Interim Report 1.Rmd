@@ -47,13 +47,31 @@ As mentioned above, there are 78 variables in this dataset. Only 44 of them are 
 Notably, most of the 44 numerical variables in this dataset are categorical data (action_taken, agency_code, applicant_race etc.). Statistics like min, max, mean do not have actual meaning for categorical data. Therefore, statistics included in the table are only meaningful to continuous/ordinal data variables, which include 9 variables: applicant_income_000s, hud_median_family_income, loan_amount_000s, number_of_1_to_4_family_units, number_of_owner_occupied_units, minority_population, population, rate_spread, tract_to_msamd_income. 
 
 # Missing Data
+Before dealing with missing data, we first create a new dataset called Mortage1 with unique and meaningful variables. To be specific, for those variables indicating the same meaning, only numeric variables are chosen. For example, we chose "action_taken" and dropped "action_taken_name". Also, for variables with more than 50% missing data, such as rate_spread, applicant-race_2/3/4/5, denial_reason_1/2/3 etc., we decide to straightly delete them.
+Among the 30 variables, 9 variables contain missing values. 
+For nominal variables like "census_tract_number", we decided to use the mode category to replace the missing value.
 
-First for some of the categorical variables using interger as category, we change them into factor. For variables with more than 50% missing data, such as rate_spread, applicant-race_2/3/4/5, denial_reason_1/2/3 etc., we decide to straightly delete them. For numeric variables with some missing data, we decide to use mean value to replace the missing value. Here we use census_tract_number as an example to present. For categorical varibles which have more than two catrgories with some missing data, we decide to use the mode category to replace the missing value. Last for the dummy variables with some missing data, we decide to use "00" meaning unknown to replace the missing value (assuming that dummy labels are "0" and "1").
-
-```{r}
-str(Mortgage)
+```{r, results= 'hide'}
 summary(Mortgage)
-Mortgage$census_tract_number[is.na(Mortgage$census_tract_number)] = mean(Mortgage$census_tract_number, na.rm = TRUE)
+Mortgage1 <- Mortgage[,c(1,2,3,6,8,9,19,21,23,24,26,36,38,48,50,52,54,56,58,60,62,64,66,67,68,72,73,74,75,76,78)]
+summary(Mortgage1)
+Mortgage1$applicant_income_000s[is.na(Mortgage1$applicant_income_000s)] = mean(Mortgage1$applicant_income_000s, na.rm = TRUE)
+Mode = function(x){
+   ux = sort(unique(x))
+   tabx = table(x)
+   maxf = ux[which(tabx ==
+max(tabx))]
+   return(maxf)
+}
+Mortgage1$msamd[is.na(Mortgage1$msamd)] = Mode(Mortgage1$msamd)
+Mortgage1$county_code[is.na(Mortgage1$county_code)] = Mode(Mortgage1$county_code)
+Mortgage1$census_tract_number[is.na(Mortgage1$census_tract_number)] = Mode(Mortgage1$census_tract_number)
+Mortgage1$number_of_1_to_4_family_units[is.na(Mortgage1$number_of_1_to_4_family_units)] = mean(Mortgage1$number_of_1_to_4_family_units, na.rm = TRUE)
+Mortgage1$number_of_owner_occupied_units[is.na(Mortgage1$number_of_owner_occupied_units)] = mean(Mortgage1$number_of_owner_occupied_units, na.rm = TRUE)
+Mortgage1$minority_population[is.na(Mortgage1$minority_population)] = mean(Mortgage1$minority_population, na.rm = TRUE)
+Mortgage1$population[is.na(Mortgage1$population)] = mean(Mortgage1$population, na.rm = TRUE)
+Mortgage1$tract_to_msamd_income[is.na(Mortgage1$tract_to_msamd_income)] = mean(Mortgage1$tract_to_msamd_income, na.rm = TRUE)
+
 ```
 
 # Histograms and density plots for key variables
@@ -64,7 +82,7 @@ Histogram and density plots are computed for four key variables: action_taken, l
 ```{r}
 library(ggplot2)
 library(dplyr)
-action= Mortgage %>% group_by(action_taken_name) %>%
+action= Mortgage1 %>% group_by(action_taken_name) %>%
   summarise(count = n()) %>%
   mutate(p = count/sum(count) * 100)
 
@@ -77,12 +95,12 @@ Like the Kernel, the first thing we did was to inspect the key variable action_t
 
 ## Histogram plot for gender
 ```{r}
-Mortgage$gender = "0"
-Mortgage$gender[Mortgage$applicant_sex == 1] = "Male"
-Mortgage$gender[Mortgage$applicant_sex == 2] = "Female"
-Mortgage$gender[Mortgage$applicant_sex == 3] = "Noinfo"
-Mortgage$gender[Mortgage$applicant_sex == 4] = "Noapp"
-his_gender <- Mortgage %>%
+Mortgage1$gender = "0"
+Mortgage1$gender[Mortgage1$applicant_sex == 1] = "Male"
+Mortgage1$gender[Mortgage1$applicant_sex == 2] = "Female"
+Mortgage1$gender[Mortgage1$applicant_sex == 3] = "Noinfo"
+Mortgage1$gender[Mortgage1$applicant_sex == 4] = "Noapp"
+his_gender <- Mortgage1 %>%
   ggplot(aes(x=gender)) +
   geom_bar() +
   ggtitle("Histogram plot for gender") +
@@ -93,14 +111,14 @@ The histogram plot for gender shows than the number of male loan applicants are 
 
 ## Histogram for Ethnicity
 ```{r}
-Mortgage$applicant_ethnicity[Mortgage$applicant_ethnicity == 1] = "Hispanic or Latino"
-Mortgage$applicant_ethnicity[Mortgage$applicant_ethnicity == 2] = "Not Hispanic or Latino"
-Mortgage$applicant_ethnicity[Mortgage$applicant_ethnicity == 3] = "Info Not Available"
-Mortgage$applicant_ethnicity[Mortgage$applicant_ethnicity == 4] = "Not Applicable"
-ethnicity = Mortgage %>% group_by(applicant_ethnicity) %>%
+Mortgage1$applicant_ethnicity_name[Mortgage$applicant_ethnicity == 1] = "Hispanic or Latino"
+Mortgage1$applicant_ethnicity_name[Mortgage$applicant_ethnicity == 2] = "Not Hispanic or Latino"
+Mortgage1$applicant_ethnicity_name[Mortgage$applicant_ethnicity == 3] = "Info Not Available"
+Mortgage1$applicant_ethnicity_name[Mortgage$applicant_ethnicity == 4] = "Not Applicable"
+ethnicity = Mortgage1 %>% group_by(applicant_ethnicity_name) %>%
   summarise(count = n()) %>%
   mutate(p = count/sum(count) * 100)
-ggplot(ethnicity, aes(x = applicant_ethnicity, y = p)) +
+ggplot(ethnicity, aes(x = applicant_ethnicity_name, y = p)) +
   geom_bar(stat='identity',colour="white")+
   labs(x='applicant ethnicity', y='pencentage',title='Ethnicity of Mortgage Applicants')
 ```
@@ -111,13 +129,15 @@ The histogram plot for gender of the New York mortgage applicants in 2015 shows 
 
 
 ## Density plot for income
+Need to be improved
 ```{r}
-Mortgage %>%
+Mortgage1 %>%
   ggplot(aes(x = applicant_income_000s)) +
   geom_density(color = "black") +
   scale_x_continuous(limits = c(0,800)) +
   ggtitle("Density plot for income") +
   xlab("income")
+
 ```
 The left skewed density plot shows that most of the applicants' income concentrate on around $50. And there are much less applicants with high income.
 
@@ -127,9 +147,9 @@ In order to have a clearer data pattern, we first created a new variable called 
 
 ## Income distribution via loan origination
 ```{r}
-Mortgage$lo <- 'unoriginated'
-Mortgage$lo[Mortgage$action_taken_name == 'Loan originated'] <- 'originated'
-Mortgage %>%
+Mortgage1$lo <- 'unoriginated'
+Mortgage1$lo[Mortgage1$action_taken_name == 'Loan originated'] <- 'originated'
+Mortgage1 %>%
   ggplot(aes(applicant_income_000s, fill = lo))  +
   geom_histogram(binwidth = 15, alpha = 0.8, color = "darkblue") +
   labs(x = 'Income', y = 'Count', title = 'Income distribution via loan origination ') +
@@ -142,7 +162,7 @@ From the income distribution via loan origination plot, it is clear that the per
 
 ## Loan amount distribution via loan origination
 ```{r}
-Mortgage %>%
+Mortgage1 %>%
   ggplot(aes(loan_amount_000s, fill = lo))  +
   geom_histogram(binwidth = 18, color = "darkblue") +
   labs(x = 'loan amount', y = 'Count', title = 'Loan amount distribution via originated and unoriginated ') +
@@ -155,7 +175,7 @@ The distribution of loan amount among loan originated and unoriginated are all l
 ## Applicant ethnicity via loan origination
 ```{r}
 library(gmodels)
-CrossTable(Mortgage$applicant_ethnicity_name, Mortgage$lo)
+CrossTable(Mortgage1$applicant_ethnicity_name, Mortgage1$lo)
 ```
 
 The crosstable of applicant ethnicity and loan origination indicates that people who are not  Hispanic or Latino are more likely to have the loan originated. While 82.9% of the observations who had their mortgage applications approved are not Hispanic or Latino, 62.1% of the observations who had their mortgage applications denied are not Hispanic or Latino. Also, while 51.9% of the total applicants (regardless of ethnicity) had their loans approved, 59% of non-Hispanic or Latino applicants had their loan approved. 
