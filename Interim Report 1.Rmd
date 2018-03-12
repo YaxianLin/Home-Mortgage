@@ -72,6 +72,24 @@ Mortgage1$tract_to_msamd_income[is.na(Mortgage1$tract_to_msamd_income)] = mean(M
 
 ```
 
+## Define Variable Loan_Approval
+```{r}
+Mortgage1$Loan_Approval = "NotApproved"
+Mortgage1$Loan_Approval[Mortgage1$action_taken == 1] = "Approved"
+Mortgage1$Loan_Approval[Mortgage1$action_taken == 2] = "Approved"
+Mortgage1$Loan_Approval[Mortgage1$action_taken == 6] = "Approved"
+```
+
+## Difference in loan approval rates between high and low-income households
+```{r}
+Mortgage1$Income_Level = "low"
+Mortgage1$Income_Level[Mortgage1$applicant_income_000s > 55.603] = "high"
+install.packages("gmodels")
+library(gmodels)
+CrossTable(Mortgage1$Income_Level, Mortgage1$Loan_Approval)
+t.test(Mortgage1$applicant_income_000s~Mortgage1$Loan_Approval)
+```
+
 # Histograms and density plots for key variables
 
 Histogram and density plots are computed for four key variables: action_taken, loan_amount, gender and applicant_ethnicity. 
