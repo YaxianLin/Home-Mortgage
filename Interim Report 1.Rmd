@@ -80,13 +80,21 @@ Mortgage1$Loan_Approval[Mortgage1$action_taken == 2] = "Approved"
 Mortgage1$Loan_Approval[Mortgage1$action_taken == 6] = "Approved"
 ```
 Under the variable action_taken, number 1-7 indicates:
+
 1 - loan originated
+
 2 - loan approved but not accepted
+
 3 - application denied by financial institutions
+
 4 - application withdrawn by applicant
+
 5 - file closed for incompleteness
+
 6 - loan purchased by the institution
+
 7 - pre-approval request denied by financial institutions
+
 Therefore, we created variable Loan_Approval for all observation. For observations with action_taken of 1, 2, and 6, their Loan_Approval indicate "Approved." For the remaining observations, their Loan_Approval are "NotApproved."
 
 ## Compare the mean loan amounts between loans that were and were not approved
