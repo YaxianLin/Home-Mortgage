@@ -45,10 +45,6 @@ stat.desc(Mortgage[, RangeVar])[c("min", "max", "range", "median", "mean"),]
 As mentioned above, there are 78 variables in this dataset. It does not make sense to compute range and other descriptive statistics for all of them since some of them are categorical data (action_taken, agency_code, applicant_race etc.) and some of them are string variables (applicant_sex_name,  applicant_ethnicity_name etc.) Statistics like range, min, max, mean do not have actual meaning for these variables. Therefore, subset RangeVar is created to only include variables whose descriptive statistics are meaningful in the Mortgage dataset. The subset RangeVar include 9 variables: applicant_income_000s, hud_median_family_income, loan_amount_000s, number_of_1_to_4_family_units, number_of_owner_occupied_units, minority_population, population, rate_spread, tract_to_msamd_income. Then the stat.desc function from the pastecs package is used to compute range and other descriptive statistics of variables in subset NumVar. Also, the stat.desc function computes 14 kinds of statistics and most of them are not necessary in this case. Thus, only min, max, range, median, and mean are included in the table.
 
 # Missing Data
-Before dealing with missing data, we first create a new dataset called Mortage1 with unique and meaningful variables. To be specific, for those variables indicating the same meaning, only numeric variables are chosen. For example, we chose "action_taken" and dropped "action_taken_name". Also, for variables with more than 50% missing data, such as rate_spread, applicant-race_2/3/4/5, denial_reason_1/2/3 etc., we decide to straightly delete them.
-Among the 30 variables, 9 variables contain missing values. 
-For nominal variables like "census_tract_number", we decided to use the mode category to replace the missing value.
-
 ```{r, results= 'hide'}
 summary(Mortgage)
 Mortgage1 <- Mortgage[,c(1,2,3,6,8,9,19,21,23,24,26,36,38,48,50,52,54,56,58,60,62,64,66,67,68,72,73,74,75,76,78)]
@@ -71,56 +67,11 @@ Mortgage1$population[is.na(Mortgage1$population)] = mean(Mortgage1$population, n
 Mortgage1$tract_to_msamd_income[is.na(Mortgage1$tract_to_msamd_income)] = mean(Mortgage1$tract_to_msamd_income, na.rm = TRUE)
 
 ```
-
-## Define Variable Loan_Approval
-```{r}
-Mortgage1$Loan_Approval = "NotApproved"
-Mortgage1$Loan_Approval[Mortgage1$action_taken == 1] = "Approved"
-Mortgage1$Loan_Approval[Mortgage1$action_taken == 2] = "Approved"
-Mortgage1$Loan_Approval[Mortgage1$action_taken == 6] = "Approved"
-```
-Under the variable action_taken, number 1-7 indicates:
-
-1 - loan originated
-
-2 - loan approved but not accepted
-
-3 - application denied by financial institutions
-
-4 - application withdrawn by applicant
-
-5 - file closed for incompleteness
-
-6 - loan purchased by the institution
-
-7 - pre-approval request denied by financial institutions
-
-Therefore, we created variable Loan_Approval for all observation. For observations with action_taken of 1, 2, and 6, their Loan_Approval indicate "Approved." For the remaining observations, their Loan_Approval are "NotApproved."
-
-## Compare the mean loan amounts between loans that were and were not approved
-```{r}
-t.test(Mortgage1$loan_amount_000s~Mortgage1$Loan_Approval)
-```
-Welch Two Sample t-test is used to compare the mean loan amounts between loans that were and were not approved. R command t.test(y~x) is used where y is a numeric variable (loan_amount_000s) and x is a binary variable (Loan_Approval, either "Approved" or "NotApproved").
-
-The null hypothesis for this t-test is that, the mean loan amounts between loans that were and were not approved are the same. The alternate hypothesis suggests the opposite. The t-test results show a t-value of 3.8170 and a p-value of 0.0001346. The null hypothesis is rejected and the alternate hypothesis is true. The difference in means is not equal to 0. 
-
-In a word, the t-test suggests that, the mean loan amounts between loans that were and were not approved are not the same, in a 99% confidence level.
-
-## Difference in loan approval rates between high and low-income households
-```{r}
-Mortgage1$Income_Level = "low"
-Mortgage1$Income_Level[Mortgage1$applicant_income_000s > 60.741] = "high"
-install.packages("gmodels")
-library(gmodels)
-CrossTable(Mortgage1$Income_Level, Mortgage1$Loan_Approval)
-t.test(Mortgage1$applicant_income_000s~Mortgage1$Loan_Approval)
-```
-Variable Income_Level is created to divided the loan applicants into two categories: high income and low income. According to the statistic on U.S Census website, the median income in the New York state is $60,741. Therefore, loan applicants with income higher than $60,741 are considered having a high income. Applicants with income equal or lower than $60,741 are considered having a low income. 
-
-CrossTable command is then used to compare the loan approval rates between high and low-income households. The results show that, 71.2% of high-income loan applicants had their loan applications approved and 62.3% of low-income applicants had their loan applications approved. 
-
-Welch Two Sample t-test is again used to test the independence of loan approval rate and household income. R command t.test(y~x) is used where y is a numeric variable (applicant_income_000s) and x is a binary variable (Loan_Approval, either "Approved" or "NotApproved"). The null hypothesis for this t-test is that, the mean applicant income between loans that were and were not approved are the same. The alternate hypothesis suggests the opposite. The t-test results show a t-value of 1.8046 and a p-value of 0.07114. The null hypothesis is rejected and the alternate hypothesis is true. The difference in means is not equal to 0. The t-test suggests that, the mean applicant incomes between loans that were and were not approved are not the same with a 90% confidence level. 
+Before dealing with missing data, we first create a new dataset called Mortage1 with unique and meaningful variables. To be specific, for those variables indicating the same meaning, only numeric variables are chosen. For example, we chose "action_taken" and dropped "action_taken_name". Also, for variables with more than 50% missing data, such as rate_spread, applicant-race_2/3/4/5, denial_reason_1/2/3 etc., we decide to straightly delete them.
+Among the 30 variables, 9 variables contain missing values. 
+By comparing the distribution before and after omitting missing values, we find the data is missing not by random so that we cannot just delete them.
+For nominal variables like "census_tract_number", we decided to use the mode category to replace the missing value.
+For variables like "applicant_income_000", we decided to replace the missing data with the mean value.
 
 # Histograms and density plots for key variables
 
@@ -182,13 +133,14 @@ Need to be improved
 Mortgage1 %>%
   ggplot(aes(x = applicant_income_000s)) +
   geom_density(color = "black") +
-  scale_x_continuous(limits = c(0,800)) +
+  scale_x_continuous(limits = c(0,1000)) +
   ggtitle("Density plot for income") +
   xlab("income")
 
 ```
-The left skewed density plot shows that most of the applicants' income concentrate on around $50. And there are much less applicants with high income.
 
+There are several things needed to be mentioned about the plot. Firstly, the right peak is caused by the replacing of missing data. ALthough it has the impact on the distribution, it is what we can do best. Secondly, 3747 rows removed because their income exceeds 1000, the range we set. The number of observation with income above 1000 is relatively small and we believe it is better to see the pattern with the limmit income range.
+From the plot, we can tell that the income distribution is left skewed, with the mode around 55. 
 # Bivariate frequency distribution
 
 In order to have a clearer data pattern, we first created a new variable called “lo”, dividing action taken data into originated loan and unoriginated regardless of the denial reasons. We then combined the new variable with applicant income level, loan amount, and applicant ethnicity to see whether any pattern exists.
@@ -204,12 +156,12 @@ Mortgage1 %>%
   scale_x_continuous(limits = c(0, 800) ) 
 ```
 
-From the income distribution via loan origination plot, it is clear that the percentage of the loan originated increase first and then decrease along to the increasing income. Therefore, we can make a conclusion that applicants, with the income level at about $50,000 to $100,000,  are more likely to receive the loan. 
+Also, 5391 rows are removed because of the limmit income range we set for the graph. And the peak should be ignored since it is caused by what we did to the missing data. From the income distribution via loan origination plot, it is clear that the percentage of the loan originated increase first and then decrease along to the increasing income. Therefore, we can make a conclusion that applicants, with the income level at about $50,000 to $100,000,  are more likely to receive the loan. 
 
 
 
 ## Loan amount distribution via loan origination
-```{r}
+```{r, warning=FALSE}
 Mortgage1 %>%
   ggplot(aes(loan_amount_000s, fill = lo))  +
   geom_histogram(binwidth = 18, color = "darkblue") +
@@ -231,4 +183,69 @@ The crosstable of applicant ethnicity and loan origination indicates that people
 # discussion of data patern
 
 Through making plots and analysis above, we have seen some patterns within variables and between variables. For example, people with the income level between $50,000 to $100,000 are more likely to get loans. However, besides the applicant characters, we also believe some other variables are essential to determining the loan origination. We believe that location variables such as "State"; property type; loan related variables such as purpose of the loan and type of the loan; and lenders' character are all relevant to loan origination. We will consider to add some of these variables into our model.
+
+## Define Variable Loan_Approval
+```{r}
+Mortgage1$Loan_Approval = "NotApproved"
+Mortgage1$Loan_Approval[Mortgage1$action_taken == 1] = "Approved"
+Mortgage1$Loan_Approval[Mortgage1$action_taken == 2] = "Approved"
+Mortgage1$Loan_Approval[Mortgage1$action_taken == 6] = "Approved"
+```
+Under the variable action_taken, number 1-7 indicates:
+
+1 - loan originated
+
+2 - loan approved but not accepted
+
+3 - application denied by financial institutions
+
+4 - application withdrawn by applicant
+
+5 - file closed for incompleteness
+
+6 - loan purchased by the institution
+
+7 - pre-approval request denied by financial institutions
+
+Therefore, we created variable Loan_Approval for all observation. For observations with action_taken of 1, 2, and 6, their Loan_Approval indicate "Approved." For the remaining observations, their Loan_Approval are "NotApproved."
+
+## Compare the mean loan amounts between loans that were and were not approved
+```{r}
+t.test(Mortgage1$loan_amount_000s~Mortgage1$Loan_Approval)
+```
+Welch Two Sample t-test is used to compare the mean loan amounts between loans that were and were not approved. R command t.test(y~x) is used where y is a numeric variable (loan_amount_000s) and x is a binary variable (Loan_Approval, either "Approved" or "NotApproved").
+
+The null hypothesis for this t-test is that, the mean loan amounts between loans that were and were not approved are the same. The alternate hypothesis suggests the opposite. The t-test results show a t-value of 3.8170 and a p-value of 0.0001346. The null hypothesis is rejected and the alternate hypothesis is true. The difference in means is not equal to 0. 
+
+In a word, the t-test suggests that, the mean loan amounts between loans that were and were not approved are not the same, in a 99% confidence level.
+
+## Difference in loan approval rates between high and low-income households
+```{r}
+Mortgage1$Income_Level = "low"
+Mortgage1$Income_Level[Mortgage1$applicant_income_000s > 60.741] = "high"
+
+library(gmodels)
+Mortgage1$la=1
+Mortgage1$la[Mortgage1$Loan_Approval=='NotApproved'] = 0
+t.test(Mortgage1$la~Mortgage1$Income_Level)
+
+```
+Variable Income_Level is created to divided the loan applicants into two categories: high income and low income. According to the statistic on U.S Census website, the median income in the New York state is $60,741. Therefore, loan applicants with income higher than $60,741 are considered having a high income. Applicants with income equal or lower than $60,741 are considered having a low income. 
+
+CrossTable command is then used to compare the loan approval rates between high and low-income households. The results show that, 71.2% of high-income loan applicants had their loan applications approved and 62.3% of low-income applicants had their loan applications approved. 
+
+Welch Two Sample t-test is again used to test the independence of loan approval rate and household income. R command t.test(y~x) is used where y is a numeric variable (applicant_income_000s) and x is a binary variable (Loan_Approval, either "Approved" or "NotApproved"). The null hypothesis for this t-test is that, the mean applicant income between loans that were and were not approved are the same. The alternate hypothesis suggests the opposite. The t-test results show a t-value of 1.8046 and a p-value of 0.07114. The null hypothesis is rejected and the alternate hypothesis is true. The difference in means is not equal to 0. The t-test suggests that, the mean applicant incomes between loans that were and were not approved are not the same with a 90% confidence level. 
+
+# Model selection
+```{r}
+set.seed(123)
+n_train1 <- round(0.7*nrow(Mortgage1))
+train1 <- sample(1:nrow(Mortgage1),n_train1)
+Mortgage_train1 <- Mortgage1[train1,]
+Mortgage_test1 <- Mortgage1[-train1,]
+ls(Mortgage_train1)
+logit1 <- glm(la ~ loan_amount_000s+applicant_sex+applicant_race_1+applicant_income_000s, data = Mortgage_train1, family = "binomial")
+summary(logit1)
+
+```
 
