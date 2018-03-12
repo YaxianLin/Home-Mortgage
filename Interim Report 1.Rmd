@@ -101,7 +101,7 @@ Therefore, we created variable Loan_Approval for all observation. For observatio
 ```{r}
 t.test(Mortgage1$loan_amount_000s~Mortgage1$Loan_Approval)
 ```
-Welch Two Sample t-test is used to compare the mean loan amounts between loans that were and were not approved. R command t.test(y~x) is used where y is the numeric variable (loan_amount_000s) and x is a binary variable (Loan_Approval, either "Approved" or "NotApproved").
+Welch Two Sample t-test is used to compare the mean loan amounts between loans that were and were not approved. R command t.test(y~x) is used where y is a numeric variable (loan_amount_000s) and x is a binary variable (Loan_Approval, either "Approved" or "NotApproved").
 
 The null hypothesis for this t-test is that, the mean loan amounts between loans that were and were not approved are the same. The alternate hypothesis suggests the opposite. The t-test results show a t-value of 3.8170 and a p-value of 0.0001346. The null hypothesis is rejected and the alternate hypothesis is true. The difference in means is not equal to 0. 
 
@@ -120,7 +120,7 @@ Variable Income_Level is created to divided the loan applicants into two categor
 
 CrossTable command is then used to compare the loan approval rates between high and low-income households. The results show that, 71.2% of high-income loan applicants had their loan applications approved and 62.3% of low-income applicants had their loan applications approved. 
 
-Welch Two Sample t-test is again used to test the independence of loan approval rate and household income. R command t.test(y~x) is used where y is the numeric variable (applicant_income_000s) and x is a binary variable (Loan_Approval, either "Approved" or "NotApproved"). The null hypothesis for this t-test is that, the mean applicant income between loans that were and were not approved are the same. The alternate hypothesis suggests the opposite. The t-test results show a t-value of 1.8046 and a p-value of 0.07114. The null hypothesis is rejected and the alternate hypothesis is true. The difference in means is not equal to 0. The t-test suggests that, the mean applicant incomes between loans that were and were not approved are not the same with a 90% confidence level. 
+Welch Two Sample t-test is again used to test the independence of loan approval rate and household income. R command t.test(y~x) is used where y is a numeric variable (applicant_income_000s) and x is a binary variable (Loan_Approval, either "Approved" or "NotApproved"). The null hypothesis for this t-test is that, the mean applicant income between loans that were and were not approved are the same. The alternate hypothesis suggests the opposite. The t-test results show a t-value of 1.8046 and a p-value of 0.07114. The null hypothesis is rejected and the alternate hypothesis is true. The difference in means is not equal to 0. The t-test suggests that, the mean applicant incomes between loans that were and were not approved are not the same with a 90% confidence level. 
 
 # Histograms and density plots for key variables
 
