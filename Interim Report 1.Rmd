@@ -38,8 +38,8 @@ In general, most variables in the data are nominal variables. For example, "acti
 # Table summarizing range in each variable
 ```{r}
 library(pastecs)
-NumVar <- sapply(Mortgage, is.numeric)
-stat.desc(Mortgage[, NumVar])[c("min", "max", "range", "median", "mean"),]
+RangeVar <- c("applicant_income_000s","hud_median_family_income", "loan_amount_000s", "number_of_1_to_4_family_units", "number_of_owner_occupied_units", "minority_population", "population", "rate_spread", "tract_to_msamd_income")
+stat.desc(Mortgage[, RangeVar])[c("min", "max", "range", "median", "mean"),]
 ```
 
 As mentioned above, there are 78 variables in this dataset. Only 44 of them are numerical variables. It only makes sense to compute range and other descriptive statistics for numerical variables only. Therefore, subset NumVar is created to contain all numerical variables in the Mortgage dataset. Then the stat.desc function from the pastecs package is used to compute range and other descriptive statistics of variables in subset NumVar. Also, the stat.desc function computes 14 kinds of statistics and most of them are not necessary in this case. Thus, only min, max, range, median, and mean are included in the table. 
