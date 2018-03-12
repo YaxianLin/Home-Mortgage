@@ -15,7 +15,7 @@ The dataset we have contains all mortgage decisions made in 2015 for the state o
 
 
 # Data Inspection
-```{r, eval=FALSE}
+```{r, eval=FALSE,warning=FALSE}
 library(ggplot2)
 library(dplyr)
 Mortgage <-read.csv("~/Downloads/ny_hmda_2015.csv")
@@ -147,13 +147,16 @@ In order to have a clearer data pattern, we first created a new variable called 
 
 ## Income distribution via loan origination
 ```{r}
+color <-  c("black","white")
 Mortgage1$lo <- 'unoriginated'
 Mortgage1$lo[Mortgage1$action_taken_name == 'Loan originated'] <- 'originated'
-Mortgage1 %>%
+p <- Mortgage1 %>%
   ggplot(aes(applicant_income_000s, fill = lo))  +
   geom_histogram(binwidth = 15, alpha = 0.8, color = "darkblue") +
   labs(x = 'Income', y = 'Count', title = 'Income distribution via loan origination ') +
   scale_x_continuous(limits = c(0, 800) ) 
+p + scale_fill_manual(values = color)
+
 ```
 
 Also, 5391 rows are removed because of the limmit income range we set for the graph. And the peak should be ignored since it is caused by what we did to the missing data. From the income distribution via loan origination plot, it is clear that the percentage of the loan originated increase first and then decrease along to the increasing income. Therefore, we can make a conclusion that applicants, with the income level at about $50,000 to $100,000,  are more likely to receive the loan. 
@@ -162,11 +165,13 @@ Also, 5391 rows are removed because of the limmit income range we set for the gr
 
 ## Loan amount distribution via loan origination
 ```{r, warning=FALSE}
-Mortgage1 %>%
+p1 <- Mortgage1 %>%
   ggplot(aes(loan_amount_000s, fill = lo))  +
   geom_histogram(binwidth = 18, color = "darkblue") +
   labs(x = 'loan amount', y = 'Count', title = 'Loan amount distribution via originated and unoriginated ') +
   scale_x_continuous(limits = c(0, 1000) )
+p1 + scale_fill_manual(values = color)
+
 ```
 
 The distribution of loan amount among loan originated and unoriginated are all left-skewed and it is hard to find a pattern between them. 
@@ -231,37 +236,73 @@ t.test(Mortgage1$la~Mortgage1$Income_Level)
 
 ```
 Variable Income_Level is created to divided the loan applicants into two categories: high income and low income. According to the statistic on U.S Census website, the median income in the New York state is $60,741. Therefore, loan applicants with income higher than $60,741 are considered having a high income. Applicants with income equal or lower than $60,741 are considered having a low income. 
-
-CrossTable command is then used to compare the loan approval rates between high and low-income households. The results show that, 71.2% of high-income loan applicants had their loan applications approved and 62.3% of low-income applicants had their loan applications approved. 
-
-Welch Two Sample t-test is again used to test the independence of loan approval rate and household income. R command t.test(y~x) is used where y is a numeric variable (applicant_income_000s) and x is a binary variable (Loan_Approval, either "Approved" or "NotApproved"). The null hypothesis for this t-test is that, the mean applicant income between loans that were and were not approved are the same. The alternate hypothesis suggests the opposite. The t-test results show a t-value of 1.8046 and a p-value of 0.07114. The null hypothesis is rejected and the alternate hypothesis is true. The difference in means is not equal to 0. The t-test suggests that, the mean applicant incomes between loans that were and were not approved are not the same with a 90% confidence level. 
+We generate a new variable called la. If loan is approved, value of la is 1, otherwise, it is 0. In this way, the mean of la is the approval rate. Hence, we can run a t-test against la and income level. It turns out that the P value is 2.2e-16. Hence the null hypothesis is rejected and the diffrence of approval rates between high and low income households is significant. Approval rate is higher in high income group.
 
 # Model selection
-```{r}
+## data split
+```{r,eval=FALSE}
+Mortgage1$applicant_race<- factor(Mortgage1$applicant_race_1)
+Mortgage1$property_type_1 <- factor(Mortgage1$property_type)
+Mortgage1$loan_purpose_1 <- factor(Mortgage1$loan_purpose)
 set.seed(123)
 n_train1 <- round(0.7*nrow(Mortgage1))
 train1 <- sample(1:nrow(Mortgage1),n_train1)
 Mortgage_train1 <- Mortgage1[train1,]
 Mortgage_test1 <- Mortgage1[-train1,]
 ls(Mortgage_train1)
-logit1 <- glm(la ~ loan_amount_000s+applicant_sex+applicant_race_1+applicant_income_000s, data = Mortgage_train1, family = "binomial")
+```
+Before started, we divided the dataset into 70% training set and 30% test set.
+## logistic regression
+Since the dependent variable, la, is a binominal variable, we should use logistic regression for this case. 
+
+```{r}
+logit1 <- glm(la ~ loan_amount_000s+applicant_sex+applicant_race+applicant_income_000s, data = Mortgage_train1, family = "binomial")
 summary(logit1)
 predict1 <- predict(logit1,newdata = Mortgage_test1, type = 'response')
-predict1 <- ifelse(predict1 > 0.5,1,0)
-
-misClasificError <- mean(predict1 != Mortgage_test1$la)
-print(paste('Accuracy',1-misClasificError))
-#confusion matrix
-table(Mortgage_test1$la, predict1 > 0.5)
-#ROCR Curve
-library(ROCR)
-ROCRpred <- prediction(predict1, Mortgage_test1$la)
-ROCRperf <- performance(ROCRpred, 'tpr','fpr')
-plot(ROCRperf, colorize = TRUE, text.adj = c(-0.2,1.7))
-
-
-logit2 <-glm(la ~ loan_amount_000s+applicant_sex+applicant_race_1+applicant_income_000s+owner_occupancy, data = Mortgage_train1, family = "binomial")
-summary(logit2)
-
+predict1 <- ifelse(predict1 > 0.50,1,0)
+table(predict1)
+misClasificError1 <- mean(predict1 != Mortgage_test1$la)
+print(paste('Accuracy',1-misClasificError1))
 ```
+In the logit1 model, dependent variable is la while independent variable are loan_amount_000s, applicant_sex, applicant_race and applicant_income_000s. The estimates give the change in the log odds of the outcome for a one unit increase in the predictor variable. For example, for every one unit change in loan_amount_000s, the log odds of loan approved (versus loan disapproved) increases by -5.966e-05. In addition, for the categorical variable applicant_race, the estimate is the difference of the log odds of loan approved (versus loan disapproved) between the specific race and race 1, which is American Indian or Alaska Native.
+The stars show the significance level of the variable. For logit1 model, only the gender of applicant is not significant. Race 4 is significant at 99.9% while other variables are extremly significant. 
+We should notice that Pseudo R square is not that meaningful for logistic regression. Instead, we use AIC to evaluate the model and the smaller of the AIC the better the model is.
+
+Then, we used the predict1 model and test set to test the model. It turns out the accuracy is 69.05%.
+
+```{r,eval=FALSE}
+logit2 <-glm(la ~ loan_amount_000s+applicant_sex+applicant_race+applicant_income_000s+owner_occupancy, data = Mortgage_train1, family = "binomial")
+summary(logit2)
+predict2 <- predict(logit2,newdata = Mortgage_test1, type = 'response')
+predict2 <- ifelse(predict2 > 0.5,1,0)
+table(predict2)
+misClasificError2 <- mean(predict2 != Mortgage_test1$la)
+print(paste('Accuracy',1-misClasificError2))
+
+
+logit3 <-glm(la ~ loan_amount_000s+applicant_sex+applicant_race+applicant_income_000s+owner_occupancy + population + property_type_1 + loan_purpose_1 , data = Mortgage_train1, family = "binomial")
+summary(logit3)
+predict3 <- predict(logit3,newdata = Mortgage_test1, type = 'response')
+predict3 <- ifelse(predict3 > 0.5,1,0)
+misClasificError3 <- mean(predict3 != Mortgage_test1$la)
+print(paste('Accuracy',1-misClasificError3))
+```
+
+We create logit2 model and logit3 model, adding different variables to logit 2 to control the omitted variable biases.
+【【【【【【【 could create a table here with variables in the model the the predicted accuracy
+
+It turns out that the logit3 model has the highest predict accuracy, which is 70.73%.
+# classification tree
+
+```{r}
+
+library(caret)
+library(rpart)
+
+tree1<-rpart(as.factor(la)~loan_amount_000s+applicant_sex+applicant_race+applicant_income_000s+owner_occupancy + population + property_type_1 + loan_purpose_1, data = Mortgage_train1)
+prp(tree1)
+tree_pred <-predict(tree1,Mortgage_test1)
+confusionMatrix(data = tree_pred, Mortgage_test1$la)
+```
+
 
