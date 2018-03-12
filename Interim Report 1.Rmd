@@ -246,6 +246,22 @@ Mortgage_test1 <- Mortgage1[-train1,]
 ls(Mortgage_train1)
 logit1 <- glm(la ~ loan_amount_000s+applicant_sex+applicant_race_1+applicant_income_000s, data = Mortgage_train1, family = "binomial")
 summary(logit1)
+predict1 <- predict(logit1,newdata = Mortgage_test1, type = 'response')
+predict1 <- ifelse(predict1 > 0.5,1,0)
+
+misClasificError <- mean(predict1 != Mortgage_test1$la)
+print(paste('Accuracy',1-misClasificError))
+#confusion matrix
+table(Mortgage_test1$la, predict1 > 0.5)
+#ROCR Curve
+library(ROCR)
+ROCRpred <- prediction(predict1, Mortgage_test1$la)
+ROCRperf <- performance(ROCRpred, 'tpr','fpr')
+plot(ROCRperf, colorize = TRUE, text.adj = c(-0.2,1.7))
+
+
+logit2 <-glm(la ~ loan_amount_000s+applicant_sex+applicant_race_1+applicant_income_000s+owner_occupancy, data = Mortgage_train1, family = "binomial")
+summary(logit2)
 
 ```
 
