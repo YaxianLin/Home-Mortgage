@@ -15,7 +15,7 @@ The dataset we have contains all mortgage decisions made in 2015 for the state o
 
 
 # Data Inspection
-```{r, eval=FALSE,warning=FALSE}
+```{r,warning=FALSE}
 library(ggplot2)
 library(dplyr)
 Mortgage <-read.csv("~/Downloads/ny_hmda_2015.csv")
@@ -240,7 +240,7 @@ We generate a new variable called la. If loan is approved, value of la is 1, oth
 
 # Model selection
 ## data split
-```{r,eval=FALSE}
+```{r}
 Mortgage1$applicant_race<- factor(Mortgage1$applicant_race_1)
 Mortgage1$property_type_1 <- factor(Mortgage1$property_type)
 Mortgage1$loan_purpose_1 <- factor(Mortgage1$loan_purpose)
@@ -272,7 +272,7 @@ We should notice that Pseudo R square is not that meaningful for logistic regres
 
 Then, we used the predict1 model and test set to test the model. It turns out the accuracy is 69.04%.
 
-```{r,eval=FALSE}
+```{r}
 logit2 <-glm(la ~ loan_amount_000s+applicant.sex+applicant_race+applicant_income_000s+owner_occupancy, data = Mortgage_train1, family = "binomial")
 summary(logit2)
 predict2 <- predict(logit2,newdata = Mortgage_test1, type = 'response')
