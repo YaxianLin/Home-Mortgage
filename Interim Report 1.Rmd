@@ -67,8 +67,8 @@ Mortgage1$population[is.na(Mortgage1$population)] = mean(Mortgage1$population, n
 Mortgage1$tract_to_msamd_income[is.na(Mortgage1$tract_to_msamd_income)] = mean(Mortgage1$tract_to_msamd_income, na.rm = TRUE)
 
 ```
-Before dealing with missing data, we first create a new dataset called Mortage1 with unique and meaningful variables. To be specific, for those variables indicating the same meaning, only numeric variables are chosen. For example, we chose "action_taken" and dropped "action_taken_name". Also, for variables with more than 50% missing data, such as rate_spread, applicant-race_2/3/4/5, denial_reason_1/2/3 etc., we decide to straightly delete them.
-Among the 30 variables, 9 variables contain missing values. 
+Before dealing with missing data, we first create a new dataset called Mortage1 with unique and meaningful variables. To be specific, for those variables indicating the same meaning, only numeric variables are chosen. For example, we chose "action_taken" and dropped "action_taken_name". Also, for variables with more than 50% missing data, such as rate_spread, applicant-race_2/3/4/5, denial_reason_1/2/3 etc., we decide to straightly delete them because this variables cannot offer enough information.
+Among the 31 variables we chosen, 9 variables contain missing values. 
 By comparing the distribution before and after omitting missing values, we find the data is missing not by random so that we cannot just delete them.
 For nominal variables like "census_tract_number", we decided to use the mode category to replace the missing value.
 For variables like "applicant_income_000", we decided to replace the missing data with the mean value.
@@ -244,6 +244,7 @@ We generate a new variable called la. If loan is approved, value of la is 1, oth
 Mortgage1$applicant_race<- factor(Mortgage1$applicant_race_1)
 Mortgage1$property_type_1 <- factor(Mortgage1$property_type)
 Mortgage1$loan_purpose_1 <- factor(Mortgage1$loan_purpose)
+Mortgage1$applicant.sex <- factor(Mortgage1$applicant_sex)
 set.seed(123)
 n_train1 <- round(0.7*nrow(Mortgage1))
 train1 <- sample(1:nrow(Mortgage1),n_train1)
@@ -256,7 +257,8 @@ Before started, we divided the dataset into 70% training set and 30% test set.
 Since the dependent variable, la, is a binominal variable, we should use logistic regression for this case. 
 
 ```{r}
-logit1 <- glm(la ~ loan_amount_000s+applicant_sex+applicant_race+applicant_income_000s, data = Mortgage_train1, family = "binomial")
+logit1 <- glm(la ~ loan_amount_000s+applicant.sex+applicant_race+applicant_income_000s, data = Mortgage_train1, family = "binomial")
+unique(Mortgage$applicant_race_name_1)
 summary(logit1)
 predict1 <- predict(logit1,newdata = Mortgage_test1, type = 'response')
 predict1 <- ifelse(predict1 > 0.50,1,0)
@@ -264,14 +266,14 @@ table(predict1)
 misClasificError1 <- mean(predict1 != Mortgage_test1$la)
 print(paste('Accuracy',1-misClasificError1))
 ```
-In the logit1 model, dependent variable is la while independent variable are loan_amount_000s, applicant_sex, applicant_race and applicant_income_000s. The estimates give the change in the log odds of the outcome for a one unit increase in the predictor variable. For example, for every one unit change in loan_amount_000s, the log odds of loan approved (versus loan disapproved) increases by -5.966e-05. In addition, for the categorical variable applicant_race, the estimate is the difference of the log odds of loan approved (versus loan disapproved) between the specific race and race 1, which is American Indian or Alaska Native.
-The stars show the significance level of the variable. For logit1 model, only the gender of applicant is not significant. Race 4 is significant at 99.9% while other variables are extremly significant. 
+In the logit1 model, dependent variable is la while independent variable are loan_amount_000s, applicant_sex, applicant_race and applicant_income_000s. The estimates give the change in the log odds of the outcome for a one unit increase in the predictor variable. For example, for every one unit change in loan_amount_000s, the log odds of loan approved (versus loan disapproved) increases by -6.009e-05. In addition, for the categorical variable applicant_race, the estimate is the difference of the log odds of loan approved (versus loan disapproved) between the specific race and race 1, which is American Indian or Alaska Native.
+The stars show the significance level of the variable. For logit1 model, only the applicant.sex2, the female, has no significant difference from the male. Applicant.sex3 is significant at 90%. Race 4 is significant at 99% while other variables are significant at 99.9%. 
 We should notice that Pseudo R square is not that meaningful for logistic regression. Instead, we use AIC to evaluate the model and the smaller of the AIC the better the model is.
 
-Then, we used the predict1 model and test set to test the model. It turns out the accuracy is 69.05%.
+Then, we used the predict1 model and test set to test the model. It turns out the accuracy is 69.04%.
 
 ```{r,eval=FALSE}
-logit2 <-glm(la ~ loan_amount_000s+applicant_sex+applicant_race+applicant_income_000s+owner_occupancy, data = Mortgage_train1, family = "binomial")
+logit2 <-glm(la ~ loan_amount_000s+applicant.sex+applicant_race+applicant_income_000s+owner_occupancy, data = Mortgage_train1, family = "binomial")
 summary(logit2)
 predict2 <- predict(logit2,newdata = Mortgage_test1, type = 'response')
 predict2 <- ifelse(predict2 > 0.5,1,0)
@@ -280,7 +282,7 @@ misClasificError2 <- mean(predict2 != Mortgage_test1$la)
 print(paste('Accuracy',1-misClasificError2))
 
 
-logit3 <-glm(la ~ loan_amount_000s+applicant_sex+applicant_race+applicant_income_000s+owner_occupancy + population + property_type_1 + loan_purpose_1 , data = Mortgage_train1, family = "binomial")
+logit3 <-glm(la ~ loan_amount_000s+applicant.sex+applicant_race+applicant_income_000s+owner_occupancy + population + property_type_1 + loan_purpose_1 , data = Mortgage_train1, family = "binomial")
 summary(logit3)
 predict3 <- predict(logit3,newdata = Mortgage_test1, type = 'response')
 predict3 <- ifelse(predict3 > 0.5,1,0)
@@ -289,9 +291,10 @@ print(paste('Accuracy',1-misClasificError3))
 ```
 
 We create logit2 model and logit3 model, adding different variables to logit 2 to control the omitted variable biases.
-【【【【【【【 could create a table here with variables in the model the the predicted accuracy
+【【【【【【【 could create a table here with variables in the model, the the predicted accuracy,AIC
 
-It turns out that the logit3 model has the highest predict accuracy, which is 70.73%.
+It turns out that the logit3 model has the highest predict accuracy, which is 70.71%.
+
 # classification tree
 
 ```{r}
