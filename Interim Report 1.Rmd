@@ -298,14 +298,18 @@ It turns out that the logit3 model has the highest predict accuracy, which is 70
 # classification tree
 
 ```{r}
-
 library(caret)
 library(rpart)
+library(rpart.plot)
 
-tree1<-rpart(as.factor(la)~loan_amount_000s+applicant_sex+applicant_race+applicant_income_000s+owner_occupancy + population + property_type_1 + loan_purpose_1, data = Mortgage_train1)
-prp(tree1)
-tree_pred <-predict(tree1,Mortgage_test1)
-confusionMatrix(data = tree_pred, Mortgage_test1$la)
+tree1 <-rpart(la ~ loan_amount_000s + applicant_sex + applicant_race + applicant_income_000s + owner_occupancy + population + property_type_1 + loan_purpose_1, data = Mortgage_train1, method = "class")
+prp(tree1, type = 1, extra = 1, under = TRUE, split.font = 1, varlen = -10)
+tree.cv <- rpart(la ~ loan_amount_000s + applicant_sex + applicant_race + applicant_income_000s + owner_occupancy + population + property_type_1 + loan_purpose_1, data = Mortgage_train1, method = "class", cp = 0.00001, minsplit = 5000, xval = 5)
+printcp(tree.cv)
+tree.pruned <- prune(tree.cv, cp = 1.8730e-04)
+length(tree.pruned$frame$var[tree.pruned$frame$var == "<leaf>"])
+pred.test <- predict(tree.pruned, Mortgage_test1, type = "class")
+confusionMatrix(pred.test, Mortgage_test1$la)
 ```
 
-
+To get the higher predicting accuracy compared to logistic model, we try to use classification tree model. We choose the variables' combination which have highest accuracy in the logistic model(logit3) and get a defaulted tree model. Then we use 5 fold cross validation tree model, and use prune function to find the best cp. And we use the best cp to get our final model tree.pruned, which has 71.38% accuracy, better than all other logistic models.
