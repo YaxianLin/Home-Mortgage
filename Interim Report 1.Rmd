@@ -1,7 +1,7 @@
 ---
-title: "Interim Report 1"
+title: "Final Report"
 author: "Yaxian Lin, Chenlu Jiang, Jingwen Wu"
-date: "2018/2/21"
+date: "2018/4/9"
 output: word_document
 ---
 
@@ -15,9 +15,14 @@ The dataset we have contains all mortgage decisions made in 2015 for the state o
 
 
 # Data Inspection
-```{r,warning=FALSE}
+```{r,warning=FALSE,results='hide'}
 library(ggplot2)
 library(dplyr)
+library(pastecs)
+library(gmodels)
+library(caret)
+library(rpart)
+library(rpart.plot)
 Mortgage <-read.csv("~/Downloads/ny_hmda_2015.csv")
 ls(Mortgage)
 unique(Mortgage$applicant_sex_name)
@@ -26,7 +31,8 @@ unique(Mortgage$owner_occupancy_name)
 unique(Mortgage$action_taken_name)
 ```
 As you can see, there are 78 variables in the dataset. It is redundant to describe the mearsurement types of all 78 variables. Besides, some of them illustrate the same thing, such as "action_taken" and "action_taken_name". Hence, we will only describe several important variables as examples.  
-In general, we divide the 78 variables into 5 subjects as kernel. 
+In general, we divide the 78 variables into 5 subjects as kernel.
+
 * applicant: ethnicity, race, sex,income level and so on
 * lender: agency
 * property: property type, occupancy of the property, and so on
@@ -37,18 +43,34 @@ In general, most variables in the data are nominal variables. For example, "acti
 
 # Table summarizing range in each variable
 ```{r}
-library(pastecs)
 RangeVar <- c("applicant_income_000s","hud_median_family_income", "loan_amount_000s", "number_of_1_to_4_family_units", "number_of_owner_occupied_units", "minority_population", "population", "rate_spread", "tract_to_msamd_income")
 stat.desc(Mortgage[, RangeVar])[c("min", "max", "range", "median", "mean"),]
 ```
 
-As mentioned above, there are 78 variables in this dataset. It does not make sense to compute range and other descriptive statistics for all of them since some of them are categorical data (action_taken, agency_code, applicant_race etc.) and some of them are string variables (applicant_sex_name,  applicant_ethnicity_name etc.) Statistics like range, min, max, mean do not have actual meaning for these variables. Therefore, subset RangeVar is created to only include variables whose descriptive statistics are meaningful in the Mortgage dataset. The subset RangeVar include 9 variables: applicant_income_000s, hud_median_family_income, loan_amount_000s, number_of_1_to_4_family_units, number_of_owner_occupied_units, minority_population, population, rate_spread, tract_to_msamd_income. Then the stat.desc function from the pastecs package is used to compute range and other descriptive statistics of variables in subset NumVar. Also, the stat.desc function computes 14 kinds of statistics and most of them are not necessary in this case. Thus, only min, max, range, median, and mean are included in the table.
+(Please see Table 1 for detailed statistics results)
+As mentioned above, there are 78 variables in this dataset. It does not make sense to compute range and other descriptive statistics for all of them since some of them are categorical data (action_taken, agency_code, applicant_race etc.) and some of them are string variables (applicant_sex_name, applicant_ethnicity_name etc.) Statistics like range, min, max, mean do not have actual meaning for these variables. Therefore, subset RangeVar is created to only include variables whose descriptive statistics are meaningful in the Mortgage dataset. The subset RangeVar include 9 variables: applicant_income_000s, hud_median_family_income, loan_amount_000s, number_of_1_to_4_family_units, number_of_owner_occupied_units, minority_population, population, rate_spread, tract_to_msamd_income. Then the stat.desc function from the pastecs package is used to compute range and other descriptive statistics of variables in subset NumVar. Also, the stat.desc function computes 14 kinds of statistics and most of them are not necessary in this case. Thus, only min, max, range, median, and mean are included in the table.
 
 # Missing Data
-```{r, results= 'hide'}
-summary(Mortgage)
+## missing pattern
+```{r}
 Mortgage1 <- Mortgage[,c(1,2,3,6,8,9,19,21,23,24,26,36,38,48,50,52,54,56,58,60,62,64,66,67,68,72,73,74,75,76,78)]
-summary(Mortgage1)
+Mortagage_nomissing <- na.omit(Mortgage1)
+
+Mortgage %>%
+  ggplot(aes(x=action_taken_name)) +
+  geom_bar() +
+  coord_flip()
+Mortagage_nomissing %>%
+  ggplot(aes(x=action_taken_name)) +
+  geom_bar() +
+  coord_flip()
+
+```
+[[[[table here]]]]
+Before dealing with missing data, we first create a new dataset called Mortage1 with unique and meaningful variables. To be specific, for those variables indicating the same meaning, only numeric variables are chosen. For example, we chose “action_taken” and dropped “action_taken_name”. Also, for variables with more than 50% missing data, such as rate_spread, applicant-race_2/3/4/5, denial_reason_1/2/3 etc., we decide to straightly delete them because these variables cannot offer enough information. Among the 31 variables we chosen, 9 variables contain missing values. 
+By comparing the distribution bar plot before and after omitting missing values, we find the number of observations with action of "Loans purchased by the institution" decreases largely after we omit missing value. Hence, the data is missing not by random and we cannot just delete them. 
+
+```{r, results= 'hide'}
 Mortgage1$applicant_income_000s[is.na(Mortgage1$applicant_income_000s)] = mean(Mortgage1$applicant_income_000s, na.rm = TRUE)
 Mode = function(x){
    ux = sort(unique(x))
@@ -67,11 +89,7 @@ Mortgage1$population[is.na(Mortgage1$population)] = mean(Mortgage1$population, n
 Mortgage1$tract_to_msamd_income[is.na(Mortgage1$tract_to_msamd_income)] = mean(Mortgage1$tract_to_msamd_income, na.rm = TRUE)
 
 ```
-Before dealing with missing data, we first create a new dataset called Mortage1 with unique and meaningful variables. To be specific, for those variables indicating the same meaning, only numeric variables are chosen. For example, we chose "action_taken" and dropped "action_taken_name". Also, for variables with more than 50% missing data, such as rate_spread, applicant-race_2/3/4/5, denial_reason_1/2/3 etc., we decide to straightly delete them because this variables cannot offer enough information.
-Among the 31 variables we chosen, 9 variables contain missing values. 
-By comparing the distribution before and after omitting missing values, we find the data is missing not by random so that we cannot just delete them.
-For nominal variables like "census_tract_number", we decided to use the mode category to replace the missing value.
-For variables like "applicant_income_000", we decided to replace the missing data with the mean value.
+For nominal variables like “census_tract_number”, we decided to use the mode category to replace the missing value. For variables like “applicant_income_000”, we decided to replace the missing data with the mean value.
 
 # Histograms and density plots for key variables
 
@@ -79,8 +97,6 @@ Histogram and density plots are computed for four key variables: action_taken, l
 
 ## Density histogram of action taken on loan
 ```{r}
-library(ggplot2)
-library(dplyr)
 action= Mortgage1 %>% group_by(action_taken_name) %>%
   summarise(count = n()) %>%
   mutate(p = count/sum(count) * 100)
@@ -121,15 +137,13 @@ ggplot(ethnicity, aes(x = applicant_ethnicity_name, y = p)) +
   geom_bar(stat='identity',colour="white")+
   labs(x='applicant ethnicity', y='pencentage',title='Ethnicity of Mortgage Applicants')
 ```
-The histogram plot for ethnicity of the New York mortgage applicants in 2015 indicates that about 5% of the observations are Hispanic or Latino; 10% of the observations have no available ethnicity information in this dataset; 13% of the observations have their ethnicity information listed as “not applicable”; 72% of the observations are not Hispanic or Latino. 
-The histogram plot for gender of the New York mortgage applicants in 2015 shows that, out of 439,654 total observations, 119,877 (27.27%) of them are female; 242,175 (55.08%) of them are male; 27,163 (6.18%) of the observations did not provide gender information; 50,439 (11.47%) of the observations have their gender listed as “not applicable.” 
+The histogram plot for ethnicity of the New York mortgage applicants in 2015 indicates that about 5% of the observations are Hispanic or Latino; 10% of the observations have no available ethnicity information in this dataset; 13% of the observations have their ethnicity information listed as “not applicable”; 72% of the observations are not Hispanic or Latino. The histogram plot for gender of the New York mortgage applicants in 2015 shows that, out of 439,654 total observations, 119,877 (27.27%) of them are female; 242,175 (55.08%) of them are male; 27,163 (6.18%) of the observations did not provide gender information; 50,439 (11.47%) of the observations have their gender listed as “not applicable.”
 
 
 
 
 ## Density plot for income
-Need to be improved
-```{r}
+```{r,warning=False}
 Mortgage1 %>%
   ggplot(aes(x = applicant_income_000s)) +
   geom_density(color = "black") +
@@ -139,14 +153,14 @@ Mortgage1 %>%
 
 ```
 
-There are several things needed to be mentioned about the plot. Firstly, the right peak is caused by the replacing of missing data. ALthough it has the impact on the distribution, it is what we can do best. Secondly, 3747 rows removed because their income exceeds 1000, the range we set. The number of observation with income above 1000 is relatively small and we believe it is better to see the pattern with the limmit income range.
-From the plot, we can tell that the income distribution is left skewed, with the mode around 55. 
+There are several things needed to be mentioned about the plot. Firstly, the right peak is caused by the replacing of missing data. Although it has the impact on the distribution, it is what we can do best. Secondly, 3747 rows removed because their income exceeds 1000, the range we set. The number of observation with income above 1000 is relatively small and we believe it is better to see the pattern with the limit income range. From the plot, we can tell that the income distribution is left skewed, with the mode around 55. 
+
 # Bivariate frequency distribution
 
 In order to have a clearer data pattern, we first created a new variable called “lo”, dividing action taken data into originated loan and unoriginated regardless of the denial reasons. We then combined the new variable with applicant income level, loan amount, and applicant ethnicity to see whether any pattern exists.
 
 ## Income distribution via loan origination
-```{r}
+```{r,warning=FALSE}
 color <-  c("black","white")
 Mortgage1$lo <- 'unoriginated'
 Mortgage1$lo[Mortgage1$action_taken_name == 'Loan originated'] <- 'originated'
@@ -159,7 +173,7 @@ p + scale_fill_manual(values = color)
 
 ```
 
-Also, 5391 rows are removed because of the limmit income range we set for the graph. And the peak should be ignored since it is caused by what we did to the missing data. From the income distribution via loan origination plot, it is clear that the percentage of the loan originated increase first and then decrease along to the increasing income. Therefore, we can make a conclusion that applicants, with the income level at about $50,000 to $100,000,  are more likely to receive the loan. 
+Also, 5391 rows are removed because of the limit income range we set for the graph. And the peak should be ignored since it is caused by what we did to the missing data. From the income distribution via loan origination plot, it is clear that the percentage of the loan originated increase first and then decrease along to the increasing income. Therefore, we can make a conclusion that applicants, with the income level at about $50,000 to $100,000, are more likely to receive the loan.
 
 
 
@@ -179,15 +193,15 @@ The distribution of loan amount among loan originated and unoriginated are all l
 
 ## Applicant ethnicity via loan origination
 ```{r}
-library(gmodels)
 CrossTable(Mortgage1$applicant_ethnicity_name, Mortgage1$lo)
 ```
 
-The crosstable of applicant ethnicity and loan origination indicates that people who are not  Hispanic or Latino are more likely to have the loan originated. While 82.9% of the observations who had their mortgage applications approved are not Hispanic or Latino, 62.1% of the observations who had their mortgage applications denied are not Hispanic or Latino. Also, while 51.9% of the total applicants (regardless of ethnicity) had their loans approved, 59% of non-Hispanic or Latino applicants had their loan approved. 
+(Please see Table 2 for detailed table)
+The cross table of applicant ethnicity and loan origination indicates that people who are not Hispanic or Latino are more likely to have the loan originated. While 82.9% of the observations who had their mortgage, applications approved are not Hispanic or Latino, 62.1% of the observations who had their mortgage applications denied are not Hispanic or Latino. Also, while 51.9% of the total applicants (regardless of ethnicity) had their loans approved, 59% of non-Hispanic or Latino applicants had their loan approved. 
 
 # discussion of data patern
 
-Through making plots and analysis above, we have seen some patterns within variables and between variables. For example, people with the income level between $50,000 to $100,000 are more likely to get loans. However, besides the applicant characters, we also believe some other variables are essential to determining the loan origination. We believe that location variables such as "State"; property type; loan related variables such as purpose of the loan and type of the loan; and lenders' character are all relevant to loan origination. We will consider to add some of these variables into our model.
+Through making plots and analysis above, we have seen some patterns within variables and between variables. For example, people with the income level between $50,000 to $100,000 are more likely to get loans. However, besides the applicant characters, we also believe some other variables are essential to determining the loan origination. We believe that location variables such as “State”; property type; loan related variables such as purpose of the loan and type of the loan; and lenders’ character are all relevant to loan origination. We will consider adding some of these variables into our model.
 
 ## Define Variable Loan_Approval
 ```{r}
@@ -235,8 +249,8 @@ Mortgage1$la[Mortgage1$Loan_Approval=='NotApproved'] = 0
 t.test(Mortgage1$la~Mortgage1$Income_Level)
 
 ```
-Variable Income_Level is created to divided the loan applicants into two categories: high income and low income. According to the statistic on U.S Census website, the median income in the New York state is $60,741. Therefore, loan applicants with income higher than $60,741 are considered having a high income. Applicants with income equal or lower than $60,741 are considered having a low income. 
-We generate a new variable called la. If loan is approved, value of la is 1, otherwise, it is 0. In this way, the mean of la is the approval rate. Hence, we can run a t-test against la and income level. It turns out that the P value is 2.2e-16. Hence the null hypothesis is rejected and the diffrence of approval rates between high and low income households is significant. Approval rate is higher in high income group.
+Variable Income_Level is created to divided the loan applicants into two categories: high income and low income. According to the statistic on U.S Census website, the median income in the New York state is $60,741 (U.S Census Bureau). Therefore, loan applicants with income higher than $60,741 are considered having a high income. Applicants with income equal or lower than $60,741 are considered having a low income. We generate a new variable called la. If loan is approved, value of la is 1, otherwise, it is 0. In this way, the mean of la is the approval rate. Hence, we can run a t-test against la and income level. It turns out that the P value is 2.2e-16. Hence the null hypothesis is rejected and the difference of approval rates between high and low-income households is significant. Approval rate is higher in high income group.
+
 
 # Model selection
 ## data split
@@ -245,6 +259,7 @@ Mortgage1$applicant_race<- factor(Mortgage1$applicant_race_1)
 Mortgage1$property_type_1 <- factor(Mortgage1$property_type)
 Mortgage1$loan_purpose_1 <- factor(Mortgage1$loan_purpose)
 Mortgage1$applicant.sex <- factor(Mortgage1$applicant_sex)
+# Mortgage1$owner_occupancy <- factor(Mortgage1$owner_occupancy)
 set.seed(123)
 n_train1 <- round(0.7*nrow(Mortgage1))
 train1 <- sample(1:nrow(Mortgage1),n_train1)
@@ -252,10 +267,8 @@ Mortgage_train1 <- Mortgage1[train1,]
 Mortgage_test1 <- Mortgage1[-train1,]
 ls(Mortgage_train1)
 ```
-Before started, we divided the dataset into 70% training set and 30% test set.
+Before started, we divided the dataset into 70% training set and 30% test set. 
 ## logistic regression
-Since the dependent variable, la, is a binominal variable, we should use logistic regression for this case. 
-
 ```{r}
 logit1 <- glm(la ~ loan_amount_000s+applicant.sex+applicant_race+applicant_income_000s, data = Mortgage_train1, family = "binomial")
 unique(Mortgage$applicant_race_name_1)
@@ -264,15 +277,14 @@ predict1 <- predict(logit1,newdata = Mortgage_test1, type = 'response')
 predict1 <- ifelse(predict1 > 0.50,1,0)
 table(predict1)
 misClasificError1 <- mean(predict1 != Mortgage_test1$la)
-print(paste('Accuracy',1-misClasificError1))
 ```
-In the logit1 model, dependent variable is la while independent variable are loan_amount_000s, applicant_sex, applicant_race and applicant_income_000s. The estimates give the change in the log odds of the outcome for a one unit increase in the predictor variable. For example, for every one unit change in loan_amount_000s, the log odds of loan approved (versus loan disapproved) increases by -6.009e-05. In addition, for the categorical variable applicant_race, the estimate is the difference of the log odds of loan approved (versus loan disapproved) between the specific race and race 1, which is American Indian or Alaska Native.
-The stars show the significance level of the variable. For logit1 model, only the applicant.sex2, the female, has no significant difference from the male. Applicant.sex3 is significant at 90%. Race 4 is significant at 99% while other variables are significant at 99.9%. 
-We should notice that Pseudo R square is not that meaningful for logistic regression. Instead, we use AIC to evaluate the model and the smaller of the AIC the better the model is.
-
+(Please see Table 3 for regression result of model logit1)
+In the logit1 model, dependent variable is la while independent variables are loan_amount_000s, applicant_sex, applicant_race and applicant_income_000s. The estimates give the change in the log odds of the outcome for a one unit increase in the predictor variable. For example, for every one unit change in loan_amount_000s, the log odds of loan approved (versus loan disapproved) increases by -6.009e-05. In addition, for the categorical variable applicant_race, the estimate is the difference of the log odds of loan approved (versus loan disapproved) between the specific race and race 1, which is American Indian or Alaska Native. The stars show the significance level of the variable. For logit1 model, only the applicant.sex2, the female, has no significant difference from the male. Applicant.sex3 is significant at 90%. Race 4 is significant at 99% while other variables are significant at 99.9%. We should notice that Pseudo R square is not that meaningful for logistic regression. Instead, we use AIC to evaluate the model and the smaller of the AIC the better the model is.
 Then, we used the predict1 model and test set to test the model. It turns out the accuracy is 69.04%.
+We then create logit2 model and logit3 model, adding different variables to logit 2 to control the omitted variable biases. It turns out that the logit3 model has the highest predict accuracy, which is 70.71%.
+(See Table 4 and 5 for regression results of models logit2 and logit3)
 
-```{r}
+```{r,eval=FALSE}
 logit2 <-glm(la ~ loan_amount_000s+applicant.sex+applicant_race+applicant_income_000s+owner_occupancy, data = Mortgage_train1, family = "binomial")
 summary(logit2)
 predict2 <- predict(logit2,newdata = Mortgage_test1, type = 'response')
@@ -287,24 +299,21 @@ summary(logit3)
 predict3 <- predict(logit3,newdata = Mortgage_test1, type = 'response')
 predict3 <- ifelse(predict3 > 0.5,1,0)
 misClasificError3 <- mean(predict3 != Mortgage_test1$la)
-print(paste('Accuracy',1-misClasificError3))
 ```
 
-We create logit2 model and logit3 model, adding different variables to logit 2 to control the omitted variable biases.
-【【【【【【【 could create a table here with variables in the model, the the predicted accuracy,AIC
+```{r}
+print(paste('Accuracy_logit1',1-misClasificError1))
+print(paste('Accuracy_logit2',1-misClasificError2))
+print(paste('Accuracy_logit3',1-misClasificError3))
+```
 
-It turns out that the logit3 model has the highest predict accuracy, which is 70.71%.
 
 # classification tree
-
 ```{r}
-library(caret)
-library(rpart)
-library(rpart.plot)
 
-tree1 <-rpart(la ~ loan_amount_000s + applicant_sex + applicant_race + applicant_income_000s + owner_occupancy + population + property_type_1 + loan_purpose_1, data = Mortgage_train1, method = "class")
+tree1 <-rpart(la ~ loan_amount_000s + applicant.sex + applicant_race + applicant_income_000s + owner_occupancy + population + property_type_1 + loan_purpose_1, data = Mortgage_train1, method = "class")
 prp(tree1, type = 1, extra = 1, under = TRUE, split.font = 1, varlen = -10)
-tree.cv <- rpart(la ~ loan_amount_000s + applicant_sex + applicant_race + applicant_income_000s + owner_occupancy + population + property_type_1 + loan_purpose_1, data = Mortgage_train1, method = "class", cp = 0.00001, minsplit = 5000, xval = 5)
+tree.cv <- rpart(la ~ loan_amount_000s + applicant.sex + applicant_race + applicant_income_000s + owner_occupancy + population + property_type_1 + loan_purpose_1, data = Mortgage_train1, method = "class", cp = 0.00001, minsplit = 5000, xval = 5)
 printcp(tree.cv)
 tree.pruned <- prune(tree.cv, cp = 1.8730e-04)
 length(tree.pruned$frame$var[tree.pruned$frame$var == "<leaf>"])
@@ -313,3 +322,54 @@ confusionMatrix(pred.test, Mortgage_test1$la)
 ```
 
 To get the higher predicting accuracy compared to logistic model, we try to use classification tree model. We choose the variables' combination which have highest accuracy in the logistic model(logit3) and get a defaulted tree model. Then we use 5 fold cross validation tree model, and use prune function to find the best cp. And we use the best cp to get our final model tree.pruned, which has 71.38% accuracy, better than all other logistic models.
+
+# Linear Regression Tree 
+```{r}
+loan_amount_000sVec = c('','+loan_amount_000s','+poly(loan_amount_000s,2)')
+applicant_income_000sVec = c('','+applicant_income_000s','+poly(applicant_income_000s,2)') 
+populationVec = c('','+population','+poly(population,2)') 
+applicant.sexVec = c('','+applicant.sex')
+applicant_raceVec= c('','+applicant_race')
+owner_occupancyVec= c('','+owner_occupancy')
+property_type_1Vec= c('','+property_type_1')
+loan_purpose_1Vec= c('','+loan_purpose_1')
+formulaSet = paste('la~1', apply(expand.grid(loan_amount_000sVec,applicant_income_000sVec,populationVec,applicant.sexVec,applicant_raceVec,owner_occupancyVec,property_type_1Vec,loan_purpose_1Vec),1,paste,collapse=''))
+
+models_train<-list()
+for(i in 1:50){
+  models_train[i]<- list(lm(as.formula(formulaSet[i]),data=Mortgage_train1))
+}
+
+
+Accuracy <- matrix(0,ncol = 2,nrow = 50)
+Accuracy <- data.frame(Accuracy)
+Accuracy <- rename(Accuracy,c(X1="model",X2="Accuracy"))
+Accuracy$model <-c(1:50)
+for(i in 1:50){
+  predict <-predict(lm(as.formula(formulaSet[i]),data=Mortgage_train1),Mortgage_test1,type = 'response')
+  predict <- ifelse(predict > 0.5,1,0)
+  misClasificError <- mean(predict != Mortgage_test1$la)
+  Accuracy$Accuracy[i] <-1-misClasificError
+}
+
+## find the model with biggest accuracy
+Accuracy$model[which.max(Accuracy$Accuracy)]
+Accuracy$Accuracy[33]
+models_train[33]
+```
+
+# Customers Segementations
+In our final selected model, there are three significant customer segments based on demographics: income, occupancy, and race. Variables that are associated with these customer segments are Applicant_race, Applicant_income_000s, Owner_occupancy.
+For the income insegment, as you can see from table 5, the coefficient of applicant_income_000s is positive and also significant at 99.9% level. It indicates that the probability of loan-approved increases as the income of a applicant increases, which makes sense in common sense.
+For the gender segment, females are less likely to get the loan approved although the difference is not statistically significant. Surprisingly, the probability of loan approval for people with not applicable sex is statistically higher than the males, which means that intersex or transgender may be specially treated by the society.
+For the race segment, we learn that if the applicants are Asian, the probability of loan-approval is higher than American Indian and Alaska Native (the log(p/1-p) is higher by 0.468); if the applicants are Black or African American, the probability of loan approval is higher than American Indian and Alaska Native(the log(p/1-p) is higher by 0.217); if the applicants are Native Hawaiian or Other Pacific Islander, the probability of loan-approval is higher than American Indian and Alaska Native (log(p/1-p) is higher by 0.188); if the applicants are White, the probability of loan approval is higher than American Indian and Alaska Native (log(p/1-p) is higher by 0.848).
+
+# Conclusion
+To conclude, our final model indicates that, all things equal:
+1) Loan applications for smaller loan amount are more likely to get approved.
+2) Asian and White loan applicants have higher probability of getting their loan applications approved. Black or African American and American Indian or Alaska Native loan applicants have lower probability of getting their loan applications approved.
+3) Applicants with higher income are more likely to get their loan approved.
+4) Loan applications with purpose of home purchase are more likely to get approved, compared to the other two loan purposes, home improvement and refinancing.
+5) Loan applications for one-to-four family dwelling property type are more likely to get approved, compared to the other two property types, manufactured housing and multifamily housing.
+6) Loan applications of property with status as “owner-occupied as a principal dwelling” are more likely to get approved.
+7) Loan applications of property that are in the more populated tract are more likely to get approved.
