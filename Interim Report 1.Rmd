@@ -23,6 +23,9 @@ library(gmodels)
 library(caret)
 library(rpart)
 library(rpart.plot)
+library(reshape)
+library(psych)
+library(Metrics)
 Mortgage <-read.csv("~/Downloads/ny_hmda_2015.csv")
 ls(Mortgage)
 unique(Mortgage$applicant_sex_name)
@@ -336,16 +339,16 @@ loan_purpose_1Vec= c('','+loan_purpose_1')
 formulaSet = paste('la~1', apply(expand.grid(loan_amount_000sVec,applicant_income_000sVec,populationVec,applicant.sexVec,applicant_raceVec,owner_occupancyVec,property_type_1Vec,loan_purpose_1Vec),1,paste,collapse=''))
 
 models_train<-list()
-for(i in 1:50){
+for(i in 1:864){
   models_train[i]<- list(lm(as.formula(formulaSet[i]),data=Mortgage_train1))
 }
 
 
-Accuracy <- matrix(0,ncol = 2,nrow = 50)
+Accuracy <- matrix(0,ncol = 2,nrow = 864)
 Accuracy <- data.frame(Accuracy)
 Accuracy <- rename(Accuracy,c(X1="model",X2="Accuracy"))
-Accuracy$model <-c(1:50)
-for(i in 1:50){
+Accuracy$model <-c(1:864)
+for(i in 1:864){
   predict <-predict(lm(as.formula(formulaSet[i]),data=Mortgage_train1),Mortgage_test1,type = 'response')
   predict <- ifelse(predict > 0.5,1,0)
   misClasificError <- mean(predict != Mortgage_test1$la)
@@ -359,7 +362,7 @@ models_train[33]
 ```
 
 # Customers Segementations
-In our final selected model, there are three significant customer segments based on demographics: income, occupancy, and race. Variables that are associated with these customer segments are Applicant_race, Applicant_income_000s, Owner_occupancy.
+In our final selected model, there are three significant customer segments based on demographics: income, occupancy, gender, and race. Variables that are associated with these customer segments are Applicant_race, Applicant_income_000s, Owner_occupancy.
 For the income insegment, as you can see from table 5, the coefficient of applicant_income_000s is positive and also significant at 99.9% level. It indicates that the probability of loan-approved increases as the income of a applicant increases, which makes sense in common sense.
 For the gender segment, females are less likely to get the loan approved although the difference is not statistically significant. Surprisingly, the probability of loan approval for people with not applicable sex is statistically higher than the males, which means that intersex or transgender may be specially treated by the society.
 For the race segment, we learn that if the applicants are Asian, the probability of loan-approval is higher than American Indian and Alaska Native (the log(p/1-p) is higher by 0.468); if the applicants are Black or African American, the probability of loan approval is higher than American Indian and Alaska Native(the log(p/1-p) is higher by 0.217); if the applicants are Native Hawaiian or Other Pacific Islander, the probability of loan-approval is higher than American Indian and Alaska Native (log(p/1-p) is higher by 0.188); if the applicants are White, the probability of loan approval is higher than American Indian and Alaska Native (log(p/1-p) is higher by 0.848).
