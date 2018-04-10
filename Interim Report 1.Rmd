@@ -59,7 +59,7 @@ As mentioned above, there are 78 variables in this dataset. It does not make sen
 Mortgage1 <- Mortgage[,c(1,2,3,6,8,9,19,21,23,24,26,36,38,48,50,52,54,56,58,60,62,64,66,67,68,72,73,74,75,76,78)]
 Mortagage_nomissing <- na.omit(Mortgage1)
 
-Mortgage %>%
+Mortgage1 %>%
   ggplot(aes(x=action_taken_name)) +
   geom_bar() +
   coord_flip()
@@ -295,8 +295,6 @@ predict2 <- ifelse(predict2 > 0.5,1,0)
 table(predict2)
 misClasificError2 <- mean(predict2 != Mortgage_test1$la)
 print(paste('Accuracy',1-misClasificError2))
-
-
 logit3 <-glm(la ~ loan_amount_000s+applicant.sex+applicant_race+applicant_income_000s+owner_occupancy + population + property_type_1 + loan_purpose_1 , data = Mortgage_train1, family = "binomial")
 summary(logit3)
 predict3 <- predict(logit3,newdata = Mortgage_test1, type = 'response')
@@ -324,7 +322,7 @@ pred.test <- predict(tree.pruned, Mortgage_test1, type = "class")
 confusionMatrix(pred.test, Mortgage_test1$la)
 ```
 
-To get the higher predicting accuracy compared to logistic model, we try to use classification tree model. We choose the variables' combination which have highest accuracy in the logistic model(logit3) and get a defaulted tree model. Then we use 5 fold cross validation tree model, and use prune function to find the best cp. And we use the best cp to get our final model tree.pruned, which has 71.38% accuracy, better than all other logistic models.
+To get the higher predicting accuracy compared to logistic model, we try to use classification tree model. We choose the variables' combination which have highest accuracy in the logistic model(logit3) and get a defaulted tree model. Then we use 5 fold cross validation tree model, and use prune function to find the best cp. And we use the best cp to get our model tree.pruned, which has 71.38% accuracy, better than all other logistic models.
 
 # Linear Regression Tree 
 ```{r}
@@ -337,18 +335,18 @@ owner_occupancyVec= c('','+owner_occupancy')
 property_type_1Vec= c('','+property_type_1')
 loan_purpose_1Vec= c('','+loan_purpose_1')
 formulaSet = paste('la~1', apply(expand.grid(loan_amount_000sVec,applicant_income_000sVec,populationVec,applicant.sexVec,applicant_raceVec,owner_occupancyVec,property_type_1Vec,loan_purpose_1Vec),1,paste,collapse=''))
-
+formulaSet <- formulaSet[c(864,863,861,860,855,854,852,851,756,755,753,752,747,648,647,645,644,540,539,537,536,432,431,429,428,423,422,420,419,324,323,321,315,314,312,306,216,215,213,212,207,206,204,203,198,197,195,108,107,105)]
 models_train<-list()
-for(i in 1:864){
+for(i in 1:50){
   models_train[i]<- list(lm(as.formula(formulaSet[i]),data=Mortgage_train1))
 }
 
 
-Accuracy <- matrix(0,ncol = 2,nrow = 864)
+Accuracy <- matrix(0,ncol = 2,nrow = 50)
 Accuracy <- data.frame(Accuracy)
 Accuracy <- rename(Accuracy,c(X1="model",X2="Accuracy"))
-Accuracy$model <-c(1:864)
-for(i in 1:864){
+Accuracy$model <-c(1:50)
+for(i in 1:50){
   predict <-predict(lm(as.formula(formulaSet[i]),data=Mortgage_train1),Mortgage_test1,type = 'response')
   predict <- ifelse(predict > 0.5,1,0)
   misClasificError <- mean(predict != Mortgage_test1$la)
@@ -357,15 +355,32 @@ for(i in 1:864){
 
 ## find the model with biggest accuracy
 Accuracy$model[which.max(Accuracy$Accuracy)]
-Accuracy$Accuracy[33]
-models_train[33]
+Accuracy$Accuracy[17]
 ```
 
+We automatically generated 50 models,using polynomials.Besides using base variables: loan-amount, income, gender and race, we add population as further controlling variable for omitted variable biases. And we also use occupancy, property type and loan-purpose in some of those 50 regression models.
+
+As you can see. the highest accuracy of these 50 linear regression models is 70.75%, which is lower than the accuracy of our classification tree. In conclusion, we choose tree.pruned as our final model.
+
 # Customers Segementations
-In our final selected model, there are three significant customer segments based on demographics: income, occupancy, gender, and race. Variables that are associated with these customer segments are Applicant_race, Applicant_income_000s, Owner_occupancy.
+In our final selected model, there are three significant customer segments based on demographics: income, occupancy, gender, and race. Variables that are associated with these customer segments are Applicant_race, Applicant_income_000s, Owner_occupancy. However, we cannot tell the significance customer segements from the classfication tree. Instead, we use logit3 model.
 For the income insegment, as you can see from table 5, the coefficient of applicant_income_000s is positive and also significant at 99.9% level. It indicates that the probability of loan-approved increases as the income of a applicant increases, which makes sense in common sense.
 For the gender segment, females are less likely to get the loan approved although the difference is not statistically significant. Surprisingly, the probability of loan approval for people with not applicable sex is statistically higher than the males, which means that intersex or transgender may be specially treated by the society.
 For the race segment, we learn that if the applicants are Asian, the probability of loan-approval is higher than American Indian and Alaska Native (the log(p/1-p) is higher by 0.468); if the applicants are Black or African American, the probability of loan approval is higher than American Indian and Alaska Native(the log(p/1-p) is higher by 0.217); if the applicants are Native Hawaiian or Other Pacific Islander, the probability of loan-approval is higher than American Indian and Alaska Native (log(p/1-p) is higher by 0.188); if the applicants are White, the probability of loan approval is higher than American Indian and Alaska Native (log(p/1-p) is higher by 0.848).
+
+# Mean approval rating for major segements
+```{r}
+Segements <- read.csv("~/Downloads/Segements.csv")
+Segements$applicant_race<- factor(Segements$applicant_race)
+Segements$property_type_1 <- factor(Segements$property_type_1)
+Segements$loan_purpose_1 <- factor(Segements$loan_purpose_1)
+Segements$applicant.sex <- factor(Segements$applicant.sex)
+Segements <- Segements[-16,-11]
+Segements$Mean.approval.rating <-predict(tree.pruned, Segements, type="prob")[,2]
+Segements[,c(1,10)]
+
+```
+We have gender and race as segements so that we will have 15 observations. We draw the conclusion from the table above that white males, white females, asians and native-hawaiian males are more likely to get loan approval. In addition, because of the nature of classification tree, the model separates different segements into several classes. Therefore, some of the mean approval ratings are the same.
 
 # Conclusion
 To conclude, our final model indicates that, all things equal:
